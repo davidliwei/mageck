@@ -1,0 +1,99 @@
+!_TAG_FILE_FORMAT	2	/extended format; --format=1 will not append ;" to lines/
+!_TAG_FILE_SORTED	1	/0=unsorted, 1=sorted, 2=foldcase/
+!_TAG_PROGRAM_AUTHOR	Darren Hiebert	/dhiebert@users.sourceforge.net/
+!_TAG_PROGRAM_NAME	Exuberant Ctags	//
+!_TAG_PROGRAM_URL	http://ctags.sourceforge.net	/official site/
+!_TAG_PROGRAM_VERSION	5.8	//
+A256	rngs.c	43;"	d	file:
+AdjustMR	CrisprNorm.c	/^int AdjustMR(ITEM_STRUCT *items, int itemNum, int winSize)$/;"	f
+AllocWords	words.c	/^char **AllocWords(int wordNum, int wordLen)$/;"	f
+Bernoulli	rvgs.c	/^   long Bernoulli(double p)$/;"	f
+BetaNoncentralCdf	math_api.c	/^double BetaNoncentralCdf ( double a, double b, double lambda, double x, double error_max )$/;"	f
+Binomial	rvgs.c	/^   long Binomial(long n, double p)$/;"	f
+CDF_MAX_ERROR	RRA.c	22;"	d	file:
+CHECK	rngs.c	41;"	d	file:
+Chisquare	rvgs.c	/^   double Chisquare(long n)$/;"	f
+ComputeDistanceCorrelation	math_api.c	/^double ComputeDistanceCorrelation(double *input, double *output, int inputNum, int dim)$/;"	f
+ComputeFDR	RRA.c	/^int ComputeFDR(GROUP_STRUCT *groups, int groupNum, double maxPercentile, int numOfRandPass)$/;"	f
+ComputeLoValue	RRA.c	/^int ComputeLoValue(double *percentiles,     \/\/array of percentiles$/;"	f
+ComputeMR	CrisprNorm.c	/^int ComputeMR(ITEM_STRUCT *items, int itemNum)$/;"	f
+DEFAULT	rngs.c	44;"	d	file:
+DirToWords	words.c	/^int DirToWords(char **words, char *dirName, int maxWordLen, int maxWordNum, const char *ext)$/;"	f
+Equilikely	rvgs.c	/^   long Equilikely(long a, long b)$/;"	f
+Erlang	rvgs.c	/^   double Erlang(long n, double b)$/;"	f
+EucliDist	math_api.c	/^double EucliDist(double *a, double *b, int dim)$/;"	f
+Exponential	rvgs.c	/^   double Exponential(double m)$/;"	f
+FreeWords	words.c	/^void FreeWords(char **ptr, int wordNum)$/;"	f
+GROUP_STRUCT	RRA.c	/^} GROUP_STRUCT;$/;"	t	typeref:struct:__anon2	file:
+Geometric	rvgs.c	/^   long Geometric(double p)$/;"	f
+GetSeed	rngs.c	/^   void GetSeed(long *x)$/;"	f
+ITEM_STRUCT	CrisprNorm.c	/^} ITEM_STRUCT;$/;"	t	typeref:struct:__anon4	file:
+ITEM_STRUCT	RRA.c	/^} ITEM_STRUCT;$/;"	t	typeref:struct:__anon1	file:
+LIST_STRUCT	RRA.c	/^} LIST_STRUCT;$/;"	t	typeref:struct:__anon3	file:
+LogGamma	math_api.c	/^double LogGamma(double x, int *flag)$/;"	f
+Lognormal	rvgs.c	/^   double Lognormal(double a, double b)$/;"	f
+MAX_GROUP_NUM	RRA.c	23;"	d	file:
+MAX_LIST_NUM	RRA.c	24;"	d	file:
+MAX_NAME_LEN	CrisprNorm.c	22;"	d	file:
+MAX_NAME_LEN	RRA.c	21;"	d	file:
+MAX_WORD_IN_LINE	CrisprNorm.c	23;"	d	file:
+MODULUS	rngs.c	39;"	d	file:
+MULTIPLIER	rngs.c	40;"	d	file:
+NDEBUG	CrisprNorm.c	14;"	d	file:
+NDEBUG	RRA.c	14;"	d	file:
+Normal	rvgs.c	/^   double Normal(double m, double s)$/;"	f
+NormalTransform	math_api.c	/^int NormalTransform(double *destA, int *rank, int sampleNum)$/;"	f
+PartialCorrel	math_api.c	/^double PartialCorrel(double *a, double *b, double *control, int dim)$/;"	f
+Pascal	rvgs.c	/^   long Pascal(long n, double p)$/;"	f
+PearsonCorrel	math_api.c	/^double PearsonCorrel(double *a, double *b, int dim)$/;"	f
+PermuteFloatArrays	math_api.c	/^void PermuteFloatArrays(double *a, int size)$/;"	f
+PlantSeeds	rngs.c	/^   void PlantSeeds(long x)$/;"	f
+Poisson	rvgs.c	/^   long Poisson(double m)$/;"	f
+PrintCommandUsage	CrisprNorm.c	/^void PrintCommandUsage(const char *command)$/;"	f
+PrintCommandUsage	RRA.c	/^void PrintCommandUsage(const char *command)$/;"	f
+ProcessGroups	RRA.c	/^int ProcessGroups(GROUP_STRUCT *groups, int groupNum, LIST_STRUCT *lists, int listNum, double maxPercentile)$/;"	f
+PutSeed	rngs.c	/^   void PutSeed(long x)$/;"	f
+QuickSortGroupByLoValue	RRA.c	/^void QuickSortGroupByLoValue(GROUP_STRUCT *groups, int lo, int hi)$/;"	f
+QuickSortItemByM	CrisprNorm.c	/^void QuickSortItemByM(ITEM_STRUCT *items, int lo, int hi)$/;"	f
+QuicksortF	math_api.c	/^void QuicksortF(double *a, int lo, int hi)$/;"	f
+QuicksortIndexedArray	math_api.c	/^void QuicksortIndexedArray(INDEXED_FLOAT *a, int lo, int hi)$/;"	f
+RAND_PASS_NUM	RRA.c	25;"	d	file:
+Random	rngs.c	/^   double Random(void)$/;"	f
+Ranking	math_api.c	/^void Ranking(int *rank, double *values, int sampleNum)$/;"	f
+ReadFile	CrisprNorm.c	/^int ReadFile(char *fileName, ITEM_STRUCT **pItems)$/;"	f
+ReadFile	RRA.c	/^int ReadFile(char *fileName, GROUP_STRUCT *groups, int maxGroupNum, int *groupNum, LIST_STRUCT *lists, int maxListNum, int *listNum)$/;"	f
+STREAMS	rngs.c	42;"	d	file:
+SaveGroupInfo	RRA.c	/^int SaveGroupInfo(char *fileName, GROUP_STRUCT *groups, int groupNum)$/;"	f
+SaveToOuput	CrisprNorm.c	/^int SaveToOuput(char *fileName, ITEM_STRUCT *items, int itemNum)$/;"	f
+SelectStream	rngs.c	/^   void SelectStream(int index)$/;"	f
+StringToWords	words.c	/^int StringToWords(char **words, char *str, int maxWordLen, int maxWordNum, const char *delim)$/;"	f
+Student	rvgs.c	/^   double Student(long n)$/;"	f
+TestRandom	rngs.c	/^   void TestRandom(void)$/;"	f
+Uniform	rvgs.c	/^   double Uniform(double a, double b)$/;"	f
+adjustedR	CrisprNorm.c	/^	double adjustedR;                \/\/adjusted log-ratio$/;"	m	struct:__anon4	file:
+bTreeSearchingF	math_api.c	/^int  bTreeSearchingF(double value, double *a, int lo, int hi)$/;"	f
+betain	math_api.c	/^double betain ( double x, double p, double q, double beta, int *ifault )$/;"	f
+fdr	RRA.c	/^	double fdr;                    \/\/false discovery rate$/;"	m	struct:__anon2	file:
+geneName	CrisprNorm.c	/^	char geneName[MAX_NAME_LEN];	 \/\/name of the gene$/;"	m	struct:__anon4	file:
+initialized	rngs.c	/^static int  initialized   = 0;          \/* test for stream initialization *\/$/;"	v	file:
+itemNum	RRA.c	/^	int itemNum;                   \/\/number of items in the group$/;"	m	struct:__anon2	file:
+itemNum	RRA.c	/^	int itemNum;                   \/\/number of items in the list$/;"	m	struct:__anon3	file:
+items	RRA.c	/^	ITEM_STRUCT *items;            \/\/items in the group$/;"	m	struct:__anon2	file:
+listIndex	RRA.c	/^	int listIndex;                 \/\/index of list storing the item$/;"	m	struct:__anon1	file:
+loValue	RRA.c	/^	double loValue;                \/\/lo-value in RRA$/;"	m	struct:__anon2	file:
+m	CrisprNorm.c	/^	double m;                        \/\/log-mean$/;"	m	struct:__anon4	file:
+main	CrisprNorm.c	/^int main (int argc, const char * argv[]) $/;"	f
+main	RRA.c	/^int main (int argc, const char * argv[]) $/;"	f
+name	RRA.c	/^	char name[MAX_NAME_LEN];       \/\/name of the group$/;"	m	struct:__anon2	file:
+name	RRA.c	/^	char name[MAX_NAME_LEN];       \/\/name of the item$/;"	m	struct:__anon1	file:
+name	RRA.c	/^	char name[MAX_NAME_LEN];       \/\/name of the list$/;"	m	struct:__anon3	file:
+normalInv	math_api.c	/^double normalInv(double p)$/;"	f
+percentile	RRA.c	/^	double percentile;             \/\/percentile in the list$/;"	m	struct:__anon1	file:
+r	CrisprNorm.c	/^	double r;                        \/\/log-ratio$/;"	m	struct:__anon4	file:
+seed	rngs.c	/^static long seed[STREAMS] = {DEFAULT};  \/* current state of each stream   *\/$/;"	v	file:
+sgName	CrisprNorm.c	/^	char sgName[MAX_NAME_LEN];       \/\/name of the sgRNA$/;"	m	struct:__anon4	file:
+stream	rngs.c	/^static int  stream        = 0;          \/* stream index, 0 is the default *\/$/;"	v	file:
+value	RRA.c	/^	double value;                  \/\/value of measurement$/;"	m	struct:__anon1	file:
+values	RRA.c	/^	double *values;                \/\/values of items in the list$/;"	m	struct:__anon3	file:
+x1	CrisprNorm.c	/^	double x1;                       \/\/value of first measure$/;"	m	struct:__anon4	file:
+x2	CrisprNorm.c	/^	double x2;						 \/\/value of second measure$/;"	m	struct:__anon4	file:
