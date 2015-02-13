@@ -9,6 +9,11 @@ http://mageck.sourceforge.net
 
 Version history
 
+Version 0.4.4
+*Improve the running speed of the RRA program.
+*For gene testing, MAGeCK now accepts multiple -t and -c pairs, allowing generating one summary table containing results of multiple comparisons. (However, the integration with pathway analysis is not fully supported.)
+*Modify the format of gene_summary.txt; the duplicated "item" column is now removed for positive selection results.
+
 Version 0.4.3
 *Fix a bug where the program exits unexpectedly for certain samples with many 0 read counts.
 *Fix a bug of pathway analysis where the RRA program stops early for certain gene belonging to too many pathways.
