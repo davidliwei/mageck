@@ -392,8 +392,8 @@ def parse_sampleids(samplelabel,ids):
   return groupids;
 
 
-def magecktest_removetmp(args):
-  tmpfile=[args.output_prefix+'.plow.txt',args.output_prefix+'.phigh.txt',args.output_prefix+'.gene.low.txt',args.output_prefix+'.gene.high.txt'];
+def magecktest_removetmp(prefix):
+  tmpfile=[prefix+'.plow.txt',prefix+'.phigh.txt',prefix+'.gene.low.txt',prefix+'.gene.high.txt'];
   for f in tmpfile:
     systemcall('rm '+f,cmsg=False);
 
@@ -418,39 +418,71 @@ def magecktest_main(args):
       sys.exit(-1);
     nsample=len(cttab[cttab.keys()[0]]);
     
-    # convert the sample label to sample index
-    treatgroup=parse_sampleids(args.treatment_id,mapres[2]);
-    if args.control_id != None:
-      controlgroup=parse_sampleids(args.control_id,mapres[2]); 
-    else:
-      controlgroup=[x for x in range(nsample) if x not in treatgroup];
-    # read the sgRNA-gene table for rank association
-    # normalization
-    cttab_sel={k:([v[i] for i in controlgroup + treatgroup]) for (k,v) in cttab.iteritems()}; # controlgroup do not overlap with treatgroup  
-    if hasattr(args,'norm_method'):
-      nttab=normalizeCounts(cttab_sel,method=args.norm_method);
-    else:
-      nttab=normalizeCounts(cttab_sel);
-    # write normalized counts to file
-    if hasattr(args,'normcounts_to_file'):
-      if args.normcounts_to_file:
-        # counts
-        mageck_printdict(nttab,args,sgrna2genelist,mapres[2],controlgroup+treatgroup);
-    
-    controlgroup_ids=list(range(len(controlgroup)));
-    treatgroup_ids=list(range(len(controlgroup),len(controlgroup+treatgroup)));
-    # perform sgRNA test, and prepare files for gene test
-    gene_as_cutoff=crispr_test(nttab, controlgroup_ids, treatgroup_ids, args.output_prefix,sgrna2genelist,args);  
-    #
-    if gene_as_cutoff[0] is not None:
-      rank_association_test(args.output_prefix+'.plow.txt',args.output_prefix+'.gene.low.txt',gene_as_cutoff[0],args);
-    if gene_as_cutoff[1] is not None:
-      rank_association_test(args.output_prefix+'.phigh.txt',args.output_prefix+'.gene.high.txt',gene_as_cutoff[1],args);
-    # merge different files
-    merge_rank_files(args.output_prefix+'.gene.low.txt',args.output_prefix+'.gene.high.txt',args.output_prefix+'.gene_summary.txt',args);
-    # clean the file
-    if args.keep_tmp==False:
-      magecktest_removetmp(args);
+    # iterate control group and treatment group
+    supergroup_control=args.control_id;
+    supergroup_treat=args.treatment_id;
+    # control group and treatment group labels
+    labellist_control=[];
+    labellist_treat=[];
+    for cpindex in range(len(supergroup_treat)):
+      # convert the sample label to sample index
+      if cpindex==0:
+        cp_prefix=args.output_prefix;
+      else:
+        cp_prefix=args.output_prefix+'.'+str(cpindex);
+      # labels
+      treatgroup=parse_sampleids(supergroup_treat[cpindex],mapres[2]);
+      treatgroup_label=str(supergroup_treat[cpindex]);
+      logging.info('Treatment samples:'+treatgroup_label);
+      labellist_treat+=[treatgroup_label];
+      if supergroup_control != None:
+        controlgroup=parse_sampleids(supergroup_control[cpindex],mapres[2]); 
+        controlgroup_label=str(supergroup_control[cpindex]);
+        logging.info('Control samples:'+controlgroup_label);
+      else:
+        controlgroup=[x for x in range(nsample) if x not in treatgroup];
+        controlgroup_label='rest';
+        logging.info('Control samples: the rest of the samples');
+      labellist_control+=[controlgroup_label];
+      # read the sgRNA-gene table for rank association
+      # normalization
+      cttab_sel={k:([v[i] for i in controlgroup + treatgroup]) for (k,v) in cttab.iteritems()}; # controlgroup do not overlap with treatgroup  
+      if hasattr(args,'norm_method'):
+        nttab=normalizeCounts(cttab_sel,method=args.norm_method);
+      else:
+        nttab=normalizeCounts(cttab_sel);
+      # write normalized counts to file
+      if hasattr(args,'normcounts_to_file'):
+        if args.normcounts_to_file:
+          # counts
+          mageck_printdict(nttab,args,sgrna2genelist,mapres[2],controlgroup+treatgroup);
+      
+      controlgroup_ids=list(range(len(controlgroup)));
+      treatgroup_ids=list(range(len(controlgroup),len(controlgroup+treatgroup)));
+      # perform sgRNA test, and prepare files for gene test
+      gene_as_cutoff=crispr_test(nttab, controlgroup_ids, treatgroup_ids, cp_prefix,sgrna2genelist,args);  
+      #
+      if gene_as_cutoff[0] is not None:
+        rank_association_test(cp_prefix+'.plow.txt',cp_prefix+'.gene.low.txt',gene_as_cutoff[0],args);
+      if gene_as_cutoff[1] is not None:
+        rank_association_test(cp_prefix+'.phigh.txt',cp_prefix+'.gene.high.txt',gene_as_cutoff[1],args);
+      # merge different files
+      merge_rank_files(cp_prefix+'.gene.low.txt',cp_prefix+'.gene.high.txt',cp_prefix+'.gene_summary.txt',args);
+      if cpindex>0:
+        if cpindex>1:
+          label1='';
+        else:
+          if len(labellist_treat)>0:
+            label1=labellist_treat[0]+'_vs_'+labellist_control[0]+'.';
+          else:
+            label1='';
+        label2=treatgroup_label+'_vs_'+controlgroup_label+'.';
+        merge_rank_summary_files(args.output_prefix+'.gene_summary.txt',cp_prefix+'.gene_summary.txt',args.output_prefix+'.gene_summary.txt',args,lowfile_prefix=label1,highfile_prefix=label2);
+      # clean the file
+      if args.keep_tmp==False:
+        magecktest_removetmp(cp_prefix);
+        if cpindex>0:
+          systemcall('rm '+cp_prefix+'.gene_summary.txt',cmsg=False);
  
 
 

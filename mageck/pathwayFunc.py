@@ -31,6 +31,7 @@ def mageck_read_GMT(args):
     if len(field)<3:
       continue;
     pathwaydict[field[0]]=[x.upper() for x in field[2:]];
+  logging.info(str(len(pathwaydict))+' pathways loaded.');
   return pathwaydict;
 
 def mageck_readgeneranking(fname,args,log2=False,columnid=2):
@@ -96,7 +97,7 @@ def mageck_pathwayrra(args):
     rraout_high=args.output_prefix+'.pathway.high.txt'
     columnid=2;
     mageck_pathwayrra_onedir(args,pdict,columnid,fname,tmppath_low,rraout_low);
-    columnid=6;
+    columnid=5; # columnid=6 if sgRNA number in positive selection is not omitted
     mageck_pathwayrra_onedir(args,pdict,columnid,fname,tmppath_high,rraout_high);
     # merge different files
     merge_rank_files(rraout_low,rraout_high,args.output_prefix+'.pathway_summary.txt',args);

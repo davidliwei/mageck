@@ -29,6 +29,74 @@ def systemcall(command, cmsg=True):
   return t;
 
 
+def merge_rank_summary_files(lowfile,highfile,outfile,args,lowfile_prefix='',highfile_prefix=''):
+  """
+  Merge multiple rank summary files
+  """
+  gfile={};
+  lowfileorder=[];
+  lowfileheader=[];
+  # read files individually
+  nline=0;
+  for line in open(lowfile):
+    field=line.strip().split();
+    nline+=1;
+    if nline==1: # skip the first line
+      lowfileheader=field;
+      lowfileheader[2:]=[lowfile_prefix+t for t in lowfileheader[2:]];
+      continue;
+    if len(field)<4:
+      logging.error('The number of fields in file '+lowfile+' is <4.');
+      sys.exit(-1);
+    gid=field[0];
+    gitem=int(field[1]);
+    g_others=field[1:];
+    gfile[gid]=[t for t in g_others];
+    lowfileorder+=[gid];
+  maxnline=nline;
+  nline=0;
+  njoinfield=0;
+  highfileheader=[];
+  for line in open(highfile):
+    field=line.strip().split();
+    nline+=1;
+    if nline==1: # skip the first line
+      highfileheader=field;
+      highfileheader[2:]=[highfile_prefix+t for t in highfileheader[2:]];
+      continue;
+    if len(field)<4:
+      logging.error('The number of fields in file '+highfile+' is <4.');
+      sys.exit(-1);
+    gid=field[0];
+    gitem=int(field[1]);
+    g_others=field[2:];
+    if gid not in gfile:
+      logging.warning('Item '+gid+' appears in '+highfile+', but not in '+lowfile+'. This record will be omitted.');
+    else:
+      prevgitem=int(gfile[gid][0]);
+      if prevgitem!=gitem:
+        logging.warning('Item number of '+gid+' does not match previous file: '+str(gitem)+' !='+str(prevgitem)+'.');
+      gfile[gid]+=g_others; # don't repeat the gitem
+      njoinfield=len(gfile[gid]);
+  # check whether some items appear in the first group, but not in the second group
+  keepsgs=[];
+  for (k,v) in gfile.iteritems():
+    if len(v)!=njoinfield:
+      logging.warning('Item '+k+' appears in '+lowfile+', but not in '+highfile+'.');
+    else:
+      keepsgs+=[k];
+  gfile2={k:gfile[k] for k in keepsgs};
+  
+  # write to files
+  ofhd=open(outfile,'w');
+  # print('\t'.join(['id','num','p.neg','fdr.neg','rank.neg','p.pos','fdr.pos','rank.pos']),file=ofhd);
+  print('\t'.join(lowfileheader)+'\t'+'\t'.join(highfileheader[2:]),file=ofhd);
+  for k in lowfileorder:
+    if k in gfile2:
+      print('\t'.join([k, '\t'.join([str(t) for t in gfile2[k]])]),file=ofhd);
+  
+  ofhd.close();
+ 
 
 
 def merge_rank_files(lowfile,highfile,outfile,args):
@@ -66,22 +134,28 @@ def merge_rank_files(lowfile,highfile,outfile,args):
     g_p=float(field[2]);
     g_fdr=float(field[3]);
     if gid not in gfile:
-      logging.warning('Warning: item '+gid+' appears in '+highfile+', but not in '+lowfile+'.');
-      gfile[gid]=[('NA',1.0,1.0,maxnline)];
-    gfile[gid]+=[(gitem,g_p,g_fdr,nline-1)];
+      logging.warning('Item '+gid+' appears in '+highfile+', but not in '+lowfile+'.');
+      #gfile[gid]=[('NA',1.0,1.0,maxnline)];
+      gfile[gid]=[(1.0,1.0,maxnline)];
+    else:
+      #gfile[gid]+=[(gitem,g_p,g_fdr,nline-1)];
+      if gfile[gid][0][0]!=gitem:
+        logging.warning('Item number of '+gid+' does not match previous file: '+str(gitem)+' !='+str(gfile[gid][0][0])+'.');
+      gfile[gid]+=[(g_p,g_fdr,nline-1)]; # don't repeat the gitem
   # check whether some items appear in the first group, but not in the second group
   for (k,v) in gfile.iteritems():
     if len(v)==1:
-      logging.warning('Warning: item '+gid+' appears in '+lowfile+', but not in '+highfile+'.');
-      gfile[gid]+=[('NA',1.0,1.0,maxnline)];
+      logging.warning('Item '+gid+' appears in '+lowfile+', but not in '+highfile+'.');
+      #gfile[gid]+=[('NA',1.0,1.0,maxnline)];
+      gfile[gid]+=[(1.0,1.0,maxnline)];
       
   
   # write to files
   ofhd=open(outfile,'w');
-  print('\t'.join(['id','num.neg','p.neg','fdr.neg','rank.neg','num.pos','p.pos','fdr.pos','rank.pos']),file=ofhd);
+  print('\t'.join(['id','num','p.neg','fdr.neg','rank.neg','p.pos','fdr.pos','rank.pos']),file=ofhd);
   if hasattr(args,'sort_criteria') and args.sort_criteria=='pos':
     logging.debug('Sorting the merged items by positive selection...');
-    skey=sorted(gfile.items(),key=lambda x : x[1][1][1]);
+    skey=sorted(gfile.items(),key=lambda x : x[1][1][0]);
   else:
     logging.debug('Sorting the merged items by negative selection...');
     skey=sorted(gfile.items(),key=lambda x : x[1][0][1]);
