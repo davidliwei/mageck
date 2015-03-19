@@ -13,7 +13,8 @@ from __future__ import print_function
 
 import sys;
 import argparse;
-import logging
+import math;
+import logging;
 
 def mageckcount_parseargs():
   """
@@ -70,7 +71,8 @@ def normalizeCounts(ctable,method='median'):
   logging.debug('Initial (total) size factor: '+' '.join([str(x) for x in samplefactor]));
   if method=='median':
     # calculate the average
-    meanval={k:(sum(v)*1.0/n) for (k,v) in ctable.iteritems() if sum(v)>0};
+    # meanval={k:(sum(v)*1.0/n) for (k,v) in ctable.iteritems() if sum(v)>0}; # mean 
+    meanval={k:math.exp( (sum( [ math.log(v2+1.0) for v2 in v])*1.0/n) ) for (k,v) in ctable.iteritems() if sum(v)>0};  # geometric mean
     meanval={k:(lambda x: x if x>0 else 1)(v) for (k,v) in meanval.iteritems()};
     #samplefactor=[0]*n;
     usetotalnorm=False;
@@ -78,7 +80,7 @@ def normalizeCounts(ctable,method='median'):
     for ni in range(n):
       meanfactor=[ v[ni]/meanval[k] for (k,v) in ctable.iteritems() if k in meanval];
       #print(str(sorted(meanfactor)))
-      xfactor=sorted(meanfactor)[m//2];
+      xfactor=sorted(meanfactor)[len(meanfactor)//2]; # corrected 
       if xfactor>0.0:
         medianfactor[ni]=1.0/xfactor;
         #logging.debug('xfactor:'+str(xfactor));

@@ -12,7 +12,10 @@ Version history
 Version 0.4.4
 *Improve the running speed of the RRA program.
 *For gene testing, MAGeCK now accepts multiple -t and -c pairs, allowing generating one summary table containing results of multiple comparisons. (However, the integration with pathway analysis is not fully supported.)
-*Modify the format of gene_summary.txt; the duplicated "item" column is now removed for positive selection results.
+*Modify the format of gene_summary.txt; the duplicated "item" column is now removed for positive selection results. Also, two more columns are added to better help users identify true hits: "lo": the RRA lo values; "goodsgrna": the number of sgRNAs in this gene whose ranking is higher than the alpha threshold. 
+*MAGeCK now allows users specifying a set of control sgRNAs to generate null distributions.
+*Fix two bugs in calculating the median factor during normalization (thanks to Bastiaan Evers).
+*Add the "-v/--version" command.
 
 Version 0.4.3
 *Fix a bug where the program exits unexpectedly for certain samples with many 0 read counts.

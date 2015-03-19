@@ -23,6 +23,7 @@
 //C++ functions
 #include <string>
 #include <vector>
+#include <map>
 #include <iostream>
 #include <fstream>
 using namespace std;
@@ -42,7 +43,7 @@ using namespace std;
 
 int PRINT_DEBUG=0;
 
-typedef struct
+typedef struct // item definition; i.e., sgRNA
 {
 	char name[MAX_NAME_LEN];       //name of the item
 	int listIndex;                 //index of list storing the item
@@ -51,17 +52,20 @@ typedef struct
 	double prob;			//The probability of each sgRNA; added by Wei
 } ITEM_STRUCT;
 
-typedef struct 
+typedef struct // group definition; i.e., gene
 {
 	char name[MAX_NAME_LEN];       //name of the group
 	ITEM_STRUCT *items;            //items in the group
 	int itemNum;                   //number of items in the group
   int maxItemNum;                // max number of items
 	double loValue;                //lo-value in RRA
+  double pvalue;                //p value for permutation
 	double fdr;                    //false discovery rate
+  int isbad;                    //if the lovalue is too low (i.e., higher than the given percentile)
+  int goodsgrnas;               //sgRNAs with significant changes
 } GROUP_STRUCT;
 
-typedef struct
+typedef struct //list definition; i.e., gene groups
 {
 	char name[MAX_NAME_LEN];       //name of the list
 	double *values;                //values of items in the list, used for sorting
@@ -69,6 +73,20 @@ typedef struct
   int maxItemNum;               //max item number
 } LIST_STRUCT;
 
+
+//Global variables
+
+//store control sequences
+bool UseControlSeq=false;
+map<string,int> ControlSeqMap; //save the control sequence name and their index in ControlSeqPercentile;
+double* ControlSeqPercentile;
+
+// used for calculation of lo-values
+double* tmpLovarray=NULL;
+int nLovarray=-1;
+
+
+//Function declarations
 //Read input file. File Format: <item id> <group id> <list id> <value>. Return 1 if success, -1 if failure
 int ReadFile(char *fileName, GROUP_STRUCT *groups, int maxGroupNum, int *groupNum, LIST_STRUCT *lists, int maxListNum, int *listNum);
 
@@ -91,15 +109,17 @@ void PrintCommandUsage(const char *command);
 //Compute lo-value based on an array of percentiles
 int ComputeLoValue(double *percentiles,     //array of percentiles
 				   int num,                 //length of array
-				   double *loValue,         //pointer to the output lo-value
-				   double maxPercentile);   //maximum percentile, computation stops when maximum percentile is reached
+				   double &loValue,         //pointer to the output lo-value
+				   double maxPercentile,   //maximum percentile, computation stops when maximum percentile is reached
+           int &goodsgrna);// # of good sgRNAs
 
 //WL: modification of lo_value computation
 int ComputeLoValue_Prob(double *percentiles,     //array of percentiles
 				   int num,                 //length of array
-				   double *loValue,         //pointer to the output lo-value
+				   double &loValue,         //pointer to the output lo-value
 				   double maxPercentile,   //maximum percentile, computation stops when maximum percentile is reached
-				  double *probValue); // probability of each prob, must be equal to the size of percentiles
+				  double *probValue,// probability of each prob, must be equal to the size of percentiles
+           int &goodsgrna);
 
 //split strings
 int stringSplit(string str, string delim, vector<string> & v){
@@ -115,6 +135,28 @@ int stringSplit(string str, string delim, vector<string> & v){
   if(start<str.length())
     v.push_back(str.substr(start,str.length()-start));
   return v.size();
+}
+
+//read control sequences
+int loadControlSeq(const char* fname){
+	ifstream fh;
+  fh.open(fname);
+  if(!fh.is_open()){
+    cerr<<"Error opening "<<fname<<endl;
+  }
+  string oneline;
+  int ncount=0;
+  ControlSeqMap.clear();
+  while(!fh.eof()){
+    getline(fh,oneline);
+    ControlSeqMap[oneline]=ncount;
+    ncount++;
+  }
+  fh.close();
+  ControlSeqPercentile = new double[ncount];
+  for(int i=0;i<ncount;i++) ControlSeqPercentile[i]=-1.0;
+  cout<<ControlSeqMap.size()<<" control sequences loaded.\n";
+  return 0;
 }
 
 int main (int argc, const char * argv[]) 
@@ -140,18 +182,20 @@ int main (int argc, const char * argv[])
 	
 	for (i=2;i<argc;i++)
 	{
-		if (strcmp(argv[i-1], "-i")==0)
-		{
+		if (strcmp(argv[i-1], "-i")==0){
 			strcpy(inputFileName, argv[i]);
 		}
-		if (strcmp(argv[i-1], "-o")==0)
-		{
+		if (strcmp(argv[i-1], "-o")==0){
 			strcpy(outputFileName, argv[i]);
 		}
-		if (strcmp(argv[i-1], "-p")==0)
-		{
+		if (strcmp(argv[i-1], "-p")==0){
 			maxPercentile = atof(argv[i]);
 		}
+		if (strcmp(argv[i-1], "--control")==0){
+       UseControlSeq=true;
+       // load control sequences
+       loadControlSeq(argv[i]);
+    }
 	}
 	
 	if ((inputFileName[0]==0)||(outputFileName[0]==0))
@@ -189,10 +233,10 @@ int main (int argc, const char * argv[])
 		printf("done.\n");
 	}
 	
-	printf("computing lo-values for each group...");
+	printf("computing lo-values for each group...\n");
 	
 	if (ProcessGroups(groups, groupNum, lists, listNum, maxPercentile)<=0)
-	{
+  {
 		printf("\nfailed.\n");
 		printf("program exit!\n");
 		
@@ -203,7 +247,7 @@ int main (int argc, const char * argv[])
 		printf("done.\n");
 	}
 	
-	printf("computing false discovery rate...");
+	printf("computing false discovery rate...\n");
 	
 	if (ComputeFDR(groups, groupNum, maxPercentile, RAND_PASS_NUM*groupNum)<=0)
 	{
@@ -240,6 +284,12 @@ int main (int argc, const char * argv[])
 		free(lists[i].values);
 	}
 	free(lists);
+  if(UseControlSeq){
+    delete[] ControlSeqPercentile;
+  }
+  if(nLovarray>0){
+    delete []tmpLovarray;
+  }
 
 	return 0;
 
@@ -254,14 +304,15 @@ void PrintCommandUsage(const char *command)
 	printf("-i <input data file>. Format: <item id> <group id> <list id> <value> [<probability>]\n");
 	printf("-o <output file>. Format: <group id> <number of items in the group> <lo-value> <false discovery rate>\n");
 	printf("-p <maximum percentile>. RRA only consider the items with percentile smaller than this parameter. Default=0.1\n");
+	printf("--control <control_sgrna list>. A list of control sgRNA names.\n");
 	printf("example:\n");
 	printf("%s -i input.txt -o output.txt -p 0.1 \n", command);
 	
 }
 
 //Read input file. File Format: <item id> <group id> <list id> <value>. Return 1 if success, -1 if failure
-
-int ReadFile(char *fileName, GROUP_STRUCT *groups, int maxGroupNum, int *groupNum, LIST_STRUCT *lists, int maxListNum, int *listNum)
+int ReadFile(char *fileName, GROUP_STRUCT *groups, int maxGroupNum, int *groupNum, 
+      LIST_STRUCT *lists, int maxListNum, int *listNum)
 {
 	//FILE *fh;
 	int i,j,k;
@@ -431,9 +482,9 @@ int ReadFile(char *fileName, GROUP_STRUCT *groups, int maxGroupNum, int *groupNu
 	//read records of items
 	
   getline(fh,oneline);
+  
   wordNum=stringSplit(oneline," \t\r\n\v",vwords);
-	//fgets(tmpS, MAX_WORD_NUM*(MAX_NAME_LEN+1)*sizeof(char), fh);
-	//wordNum = StringToWords(words, tmpS, MAX_NAME_LEN+1, MAX_WORD_NUM, " \t\r\n\v\f");
+  // fields saved to vwords: sgRNA name, gene name, list name, value
 	
 	while ((wordNum>=4)&&(!fh.eof()))
 	{
@@ -453,12 +504,8 @@ int ReadFile(char *fileName, GROUP_STRUCT *groups, int maxGroupNum, int *groupNu
 		}
 
 
-		// WL: separate the group name by ","
-		//strcpy(tmpS2,words[1]);
-		//subWordNum=StringToWords(subwords,tmpS2,MAX_NAME_LEN+1,MAX_WORD_NUM,",");
-    subWordNum=stringSplit(vwords[1],",",vsubwords);
-		assert(subWordNum>0);
 		
+    //WL: now, search for corresponding list index
   		for (j=0;j<tmpListNum;j++)
   		{
   			if (!strcmp(vwords[2].c_str(), lists[j].name))
@@ -467,12 +514,17 @@ int ReadFile(char *fileName, GROUP_STRUCT *groups, int maxGroupNum, int *groupNu
   			}
   		}
     	assert(j<tmpListNum);
-
+    // save to list
 		lists[j].values[lists[j].itemNum] = tmpValue;
  		lists[j].itemNum ++;
     assert(lists[j].itemNum <=lists[j].maxItemNum);
+    
+    //WL: search for gene name (group name)
+		// WL: separate the group name by ","
+    subWordNum=stringSplit(vwords[1],",",vsubwords);
+		assert(subWordNum>0);
 		//for(k=0;k<subWordNum;k++)
-		for(k=0;k<subWordNum;k++)
+	 for(k=0;k<subWordNum;k++)
    {
       	//printf("gene: %s, word: %s\n",tmpItemName,subwords[k]);
   			for (i=0;i<tmpGroupNum;i++)
@@ -486,6 +538,7 @@ int ReadFile(char *fileName, GROUP_STRUCT *groups, int maxGroupNum, int *groupNu
   		
   			assert(i<tmpGroupNum);
   		
+        //save group name(gene name)
   			//strcpy(groups[i].items[groups[i].itemNum].name,tmpItemName);
   			strcpy(groups[i].items[groups[i].itemNum].name,vwords[0].c_str());
   			groups[i].items[groups[i].itemNum].value = tmpValue;
@@ -496,14 +549,13 @@ int ReadFile(char *fileName, GROUP_STRUCT *groups, int maxGroupNum, int *groupNu
   		
       	//printf("round %d, group %d itemnum: %d (max %d), list %d itemnum: %d (max %d)\n",k,i,groups[i].itemNum,groups[i].maxItemNum,j,lists[j].itemNum,lists[j].maxItemNum);
       
-    }
+    }//end subwordnum 
 		
-		//fgets(tmpS, MAX_WORD_NUM*(MAX_NAME_LEN+1)*sizeof(char), fh);
 		//wordNum = StringToWords(words, tmpS, MAX_NAME_LEN+1, MAX_WORD_NUM, " \t\r\n\v\f");
     getline(fh,oneline);
     wordNum=stringSplit(oneline," \t\r\f\v",vwords);
    	//printf("wordnum:%d,read one line length:%d\n",wordNum,strlen(tmpS));
-	}
+	}//end loop for fh reading
 	
 	fh.close();
 	//fclose(fh);
@@ -530,17 +582,15 @@ int SaveGroupInfo(char *fileName, GROUP_STRUCT *groups, int groupNum)
 	
 	fh = (FILE *)fopen(fileName, "w");
 	
-	if (!fh)
-	{
+	if (!fh){
 		printf("Cannot open %s.\n", fileName);
 		return -1;
 	}
 	
-	fprintf(fh, "group_id\titems_in_group\tlo_value\tFDR\n");
+	fprintf(fh, "group_id\titems_in_group\tlo_value\tp\tFDR\tgoodsgrna\n");
 	
-	for (i=0;i<groupNum;i++)
-	{
-		fprintf(fh, "%s\t%d\t%10.4e\t%f\n", groups[i].name, groups[i].itemNum, groups[i].loValue, groups[i].fdr);
+	for (i=0;i<groupNum;i++){
+		fprintf(fh, "%s\t%d\t%10.4e\t%10.4e\t%f\t%d\n", groups[i].name, groups[i].itemNum, groups[i].loValue, groups[i].pvalue,groups[i].fdr,groups[i].goodsgrnas);
 	}
 	
 	fclose(fh);
@@ -564,10 +614,8 @@ int ProcessGroups(GROUP_STRUCT *groups, int groupNum, LIST_STRUCT *lists, int li
 
   PRINT_DEBUG=1;
 	
-	for (i=0;i<groupNum;i++)
-	{
-		if (groups[i].itemNum>maxItemPerGroup)
-		{
+	for (i=0;i<groupNum;i++){
+		if (groups[i].itemNum>maxItemPerGroup){
 			maxItemPerGroup = groups[i].itemNum;
 		}
 	}
@@ -577,13 +625,11 @@ int ProcessGroups(GROUP_STRUCT *groups, int groupNum, LIST_STRUCT *lists, int li
 	tmpF = (double *)malloc(maxItemPerGroup*sizeof(double));
 	tmpProb = (double *)malloc(maxItemPerGroup*sizeof(double));
 	
-	for (i=0;i<listNum;i++)
-	{
+	for (i=0;i<listNum;i++){
 		QuicksortF(lists[i].values, 0, lists[i].itemNum-1);
 	}
 	
-	for (i=0;i<groupNum;i++)
-	{
+	for (i=0;i<groupNum;i++){
 		//Compute percentile for each item
 		
 		isallone=true;
@@ -601,24 +647,39 @@ int ProcessGroups(GROUP_STRUCT *groups, int groupNum, LIST_STRUCT *lists, int li
 			{
 				isallone=false;
 			}
+      // save for control sequences
+      if(UseControlSeq){
+        string sgname(groups[i].items[j].name);
+        if(ControlSeqMap.count(sgname)>0){
+          int sgindex=ControlSeqMap[sgname];
+          ControlSeqPercentile[sgindex]=tmpF[j];
+        }
+      }
 		}
-    if(groups[i].itemNum<=1)
-    {
+    if(groups[i].itemNum<=1){
       isallone=true;
     }
     //printf("Gene: %s\n",groups[i].name);
-		if(isallone)
-		{
-			ComputeLoValue(tmpF, groups[i].itemNum, &(groups[i].loValue), maxPercentile);
+		if(isallone){
+			ComputeLoValue(tmpF, groups[i].itemNum, groups[i].loValue, maxPercentile, groups[i].goodsgrnas);
 		}
-		else
-		{
-			ComputeLoValue_Prob(tmpF, groups[i].itemNum, &(groups[i].loValue), maxPercentile, tmpProb);
+		else{
+			ComputeLoValue_Prob(tmpF, groups[i].itemNum, groups[i].loValue, maxPercentile, tmpProb,groups[i].goodsgrnas);
 		}
+    groups[i].isbad=0;
 	}
 
 	free(tmpF);
 	free(tmpProb);
+  //check if all control sequences are properly assigned a value
+  if(UseControlSeq){
+    for(map<string,int>::iterator mit = ControlSeqMap.begin(); mit != ControlSeqMap.end(); mit++){
+      if(ControlSeqPercentile[mit->second]<0){
+        cerr<<"Warning: sgRNA "<<mit->first<<" not found in the ranked list. \n";
+        //ControlSeqPercentile[mit->second]=0.5;
+      }
+    }
+  }//end UseControlSeq
 	
 	return 1;
 }
@@ -626,19 +687,24 @@ int ProcessGroups(GROUP_STRUCT *groups, int groupNum, LIST_STRUCT *lists, int li
 //Compute lo-value based on an array of percentiles. Return 1 if success, 0 if failure
 int ComputeLoValue(double *percentiles,     //array of percentiles
 				   int num,                 //length of array
-				   double *loValue,         //pointer to the output lo-value
-				   double maxPercentile)   //maximum percentile, computation stops when maximum percentile is reached
-{
+				   double &loValue,         //pointer to the output lo-value
+				   double maxPercentile,   //maximum percentile, computation stops when maximum percentile is reached
+           int &goodsgrna){   // the number of " good" sgRNAs
 	int i;
 	double *tmpArray;
 	double tmpLoValue, tmpF;
 	
 	assert(num>0);
 	
-	tmpArray = (double *)malloc(num*sizeof(double));
+  if(num>nLovarray){
+    delete[] tmpLovarray;
+    tmpLovarray=new double[num];
+    nLovarray=num;
+  }
+	//tmpArray = (double *)malloc(num*sizeof(double));
+  tmpArray=tmpLovarray;
 	
-	if (!tmpArray)
-	{
+	if (!tmpArray){
 		return -1;
 	}
 	
@@ -647,23 +713,28 @@ int ComputeLoValue(double *percentiles,     //array of percentiles
 	QuicksortF(tmpArray, 0, num-1);
 	
 	tmpLoValue = 1.0;
+  goodsgrna=0;
 	
 	for (i=0;i<num;i++)
 	{
-		if ((tmpArray[i]>maxPercentile)&&(i>0))
-		{
-			break;
-		}
+		// if ((tmpArray[i]>maxPercentile)&&(i>0)) //only calculate the value if at least 1 percentile is smaller than the cutoff
+		if ((tmpArray[i]>maxPercentile)){
+      if(i==0){}
+      else{
+			  break;
+      }
+		}else{
+      goodsgrna++;
+    }
 		tmpF = BetaNoncentralCdf((double)(i+1),(double)(num-i),0.0,tmpArray[i],CDF_MAX_ERROR);
-		if (tmpF<tmpLoValue)
-		{
+		if (tmpF<tmpLoValue){
 			tmpLoValue = tmpF;
 		}
 	}
 	
-	*loValue = tmpLoValue;
+	loValue = tmpLoValue;
 
-	free(tmpArray);
+	//free(tmpArray);
 	
 	return 0;
 	
@@ -674,10 +745,11 @@ int ComputeLoValue(double *percentiles,     //array of percentiles
 //Modified by Wei Li
 int ComputeLoValue_Prob(double *percentiles,     //array of percentiles
 				   int num,                 //length of array
-				   double *loValue,         //pointer to the output lo-value
+				   double &loValue,         //pointer to the output lo-value
 				   double maxPercentile,   //maximum percentile, computation stops when maximum percentile is reached
-				  double *probValue) // probability of each prob, must be equal to the size of percentiles
-{
+				  double *probValue,
+          int &goodsgrna) {// probability of each prob, must be equal to the size of percentiles
+
 	int i, pid;
 	double *tmpArray;
 	double tmpLoValue, tmpF;
@@ -689,17 +761,35 @@ int ComputeLoValue_Prob(double *percentiles,     //array of percentiles
 	double accuLoValue;
 
 	assert(num>0);
+		
+  if(num>nLovarray){
+    delete[] tmpLovarray;
+    tmpLovarray=new double[num];
+    nLovarray=num;
+  }
+	//tmpArray = (double *)malloc(num*sizeof(double));
+  tmpArray=tmpLovarray;
 	
-	tmpArray = (double *)malloc(num*sizeof(double));
-	
-	if (!tmpArray)
-	{
+	if (!tmpArray){
 		return -1;
 	}
 	
 	memcpy(tmpArray, percentiles, num*sizeof(double));
 	
 	QuicksortF(tmpArray, 0, num-1);
+  
+  goodsgrna=0;
+  for (i=0;i<num;i++){
+		if ((tmpArray[i]>maxPercentile)){
+      if(i==0){}else{
+			  break;
+      }
+		}else{
+      goodsgrna++;
+    }
+  }
+
+  
   if(PRINT_DEBUG) printf("probs:");
   for(i=0;i<num;i++)
   {
@@ -751,10 +841,9 @@ int ComputeLoValue_Prob(double *percentiles,     //array of percentiles
 	}
   if(PRINT_DEBUG) printf("total: %f\n",accuLoValue);
 	
-	*loValue = accuLoValue;
+	loValue = accuLoValue;
 
-	free(tmpArray);
-	
+	//free(tmpArray);
 	return 0;
 	
 }
@@ -774,39 +863,68 @@ int ComputeFDR(GROUP_STRUCT *groups, int groupNum, double maxPercentile, int num
 	double *tmpProb;
 	double isallone;
 	
-	for (i=0;i<groupNum;i++)
-	{
-		if (groups[i].itemNum>maxItemNum)
-		{
+	for (i=0;i<groupNum;i++){
+		if (groups[i].itemNum>maxItemNum){
 			maxItemNum = groups[i].itemNum;
 		}
 	}
 	
 	assert(maxItemNum>0);
 	
-	tmpPercentile = (double *)malloc(maxItemNum*sizeof(double));
-	tmpProb= (double *)malloc(maxItemNum*sizeof(double));
-	
+	//tmpPercentile = (double *)malloc(maxItemNum*sizeof(double));
+	//tmpProb= (double *)malloc(maxItemNum*sizeof(double));
+  tmpPercentile=new double[maxItemNum];
+  tmpProb=new double[maxItemNum];	
+
 	randLoValueNum = groupNum*scanPass;
 	
 	assert(randLoValueNum>0);
 	
-	randLoValue = (double *)malloc(randLoValueNum*sizeof(double));
+	//randLoValue = (double *)malloc(randLoValueNum*sizeof(double));
+  randLoValue=new double[randLoValueNum];
 	
 	randLoValueNum = 0;
 	
 	PlantSeeds(123456);
   
   PRINT_DEBUG=0;
-	
-	for (i=0;i<scanPass;i++)
-	{
-		for (j=0;j<groupNum;j++)
-		{
+  
+  // set up control sequences
+  int n_control=0;
+  double* control_prob_array=NULL;
+  double ufvalue=0.5;
+  int rand_ctl_index=0;
+  int tmp_int;
+	if(UseControlSeq){
+    for(map<string,int>::iterator mit = ControlSeqMap.begin(); mit != ControlSeqMap.end(); mit++){
+      if(ControlSeqPercentile[mit->second]>=0){
+        n_control++;
+      }
+    }
+    control_prob_array=new double[n_control];
+    n_control=0;
+    for(map<string,int>::iterator mit = ControlSeqMap.begin(); mit != ControlSeqMap.end(); mit++){
+      if(ControlSeqPercentile[mit->second]>=0){
+        control_prob_array[n_control]=ControlSeqPercentile[mit->second];
+        n_control++;
+      }
+    }
+    cout<<"Total # control sgRNAs: "<<n_control<<endl;
+  }
+  
+	for (i=0;i<scanPass;i++){
+    for (j=0;j<groupNum;j++){
 			isallone=true;
 			for (k=0;k<groups[j].itemNum;k++)
 			{
-				tmpPercentile[k] = Uniform(0.0, 1.0);
+        ufvalue=Uniform(0.0, 1.0);
+        if(UseControlSeq){
+          rand_ctl_index=(int)(n_control*ufvalue);
+          if(rand_ctl_index>=n_control) rand_ctl_index=n_control-1;
+          tmpPercentile[k]=control_prob_array[rand_ctl_index];
+        }else{
+				  tmpPercentile[k] = ufvalue;
+        }
 				tmpProb[k]=groups[j].items[k].prob;
 				if(tmpProb[k]!=1.0)
 				{
@@ -818,13 +936,12 @@ int ComputeFDR(GROUP_STRUCT *groups, int groupNum, double maxPercentile, int num
         isallone=true;
       }
 			
-			if(isallone)
-			{
-				ComputeLoValue(tmpPercentile, groups[j].itemNum,&(randLoValue[randLoValueNum]), maxPercentile);
+			if(isallone){
+				ComputeLoValue(tmpPercentile, groups[j].itemNum,randLoValue[randLoValueNum], maxPercentile, tmp_int);
 			}
 			else
 			{
-				ComputeLoValue_Prob(tmpPercentile, groups[j].itemNum,&(randLoValue[randLoValueNum]), maxPercentile,tmpProb);
+				ComputeLoValue_Prob(tmpPercentile, groups[j].itemNum,randLoValue[randLoValueNum], maxPercentile,tmpProb,tmp_int);
 			}
 			
 			randLoValueNum++;
@@ -835,14 +952,32 @@ int ComputeFDR(GROUP_STRUCT *groups, int groupNum, double maxPercentile, int num
 						  
 	QuickSortGroupByLoValue(groups, 0, groupNum-1);
 	
-	for (i=0;i<groupNum;i++)
-	{
+  //FDR calcuation
+  int goodGroupNum=0;
+  for(i=0;i<groupNum;i++){
+     //if(groups[i].isbad==0) 
+    goodGroupNum+=1;
+  }
+  //save the index
+  if(goodGroupNum==0) goodGroupNum=1;
+  cout<<"Number of groups under permutation and FDR adjustment: "<<goodGroupNum<<endl;
+  int* indexval=new int[goodGroupNum];
+  int goodindex=0;
+	for (i=0;i<groupNum;i++){
 		//groups[i].fdr = (double)(bTreeSearchingF(groups[i].loValue-0.000000001, randLoValue, 0, randLoValueNum-1)
 		//						 +bTreeSearchingF(groups[i].loValue+0.000000001, randLoValue, 0, randLoValueNum-1)+1)
 		//						/2/randLoValueNum/((double)i+0.5)*groupNum;
-		groups[i].fdr = (double)(bTreeSearchingF(groups[i].loValue-0.000000001, randLoValue, 0, randLoValueNum-1)
+    if(groups[i].isbad==0){
+      groups[i].pvalue=(double)(bTreeSearchingF(groups[i].loValue-0.000000001, randLoValue, 0, randLoValueNum-1)
 								 +bTreeSearchingF(groups[i].loValue+0.000000001, randLoValue, 0, randLoValueNum-1)+1)
-								/2/randLoValueNum/((double)i+1.0)*groupNum;
+								/2/randLoValueNum;
+		  groups[i].fdr = groups[i].pvalue/((double)i+1.0)*goodGroupNum;
+      indexval[goodindex]=i;
+      goodindex++;
+    }else{
+      groups[i].pvalue=1.0;
+      groups[i].fdr=1.0;
+    }
 	}
 	
 	if (groups[groupNum-1].fdr>1.0)
@@ -850,17 +985,25 @@ int ComputeFDR(GROUP_STRUCT *groups, int groupNum, double maxPercentile, int num
 		groups[groupNum-1].fdr = 1.0;
 	}
 	
-	for (i=groupNum-2;i>=0;i--)
-	{
-		if (groups[i].fdr>groups[i+1].fdr)
-		{
-			groups[i].fdr = groups[i+1].fdr;
+	for (i=goodGroupNum-2;i>=0;i--){
+    int g_i=indexval[i];
+    int g_ip1=indexval[i+1];
+		if (groups[g_i].fdr>groups[g_ip1].fdr){
+			groups[g_i].fdr = groups[g_ip1].fdr;
 		}
 	}
 	
-	free(tmpPercentile);
-	free(tmpProb);
-	free(randLoValue);
+	//free(tmpPercentile);
+	//free(tmpProb);
+	//free(randLoValue);
+  delete []tmpPercentile;
+  delete []tmpProb;
+  delete []randLoValue;
+  
+  if(UseControlSeq){
+    delete[] control_prob_array;
+  }
+  delete []indexval;
 	
 	return 1;
 }

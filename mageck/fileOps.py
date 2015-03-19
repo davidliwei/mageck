@@ -116,9 +116,11 @@ def merge_rank_files(lowfile,highfile,outfile,args):
       sys.exit(-1);
     gid=field[0];
     gitem=int(field[1]);
-    g_p=float(field[2]);
-    g_fdr=float(field[3]);
-    gfile[gid]=[(gitem,g_p,g_fdr,nline-1)];
+    g_lo=float(field[2]);
+    g_p=float(field[3]);
+    g_fdr=float(field[4]);
+    g_goodsgrna=int(field[5]);
+    gfile[gid]=[(gitem,g_lo,g_p,g_fdr,nline-1,g_goodsgrna)];
   maxnline=nline;
   nline=0;
   for line in open(highfile):
@@ -131,28 +133,30 @@ def merge_rank_files(lowfile,highfile,outfile,args):
       sys.exit(-1);
     gid=field[0];
     gitem=int(field[1]);
-    g_p=float(field[2]);
-    g_fdr=float(field[3]);
+    g_lo=float(field[2]);
+    g_p=float(field[3]);
+    g_fdr=float(field[4]);
+    g_goodsgrna=int(field[5]);
     if gid not in gfile:
       logging.warning('Item '+gid+' appears in '+highfile+', but not in '+lowfile+'.');
       #gfile[gid]=[('NA',1.0,1.0,maxnline)];
-      gfile[gid]=[(1.0,1.0,maxnline)];
+      gfile[gid]=[(1.0,1.0,1.0,maxnline,0)]; # note that gitem is not saved
     else:
       #gfile[gid]+=[(gitem,g_p,g_fdr,nline-1)];
       if gfile[gid][0][0]!=gitem:
         logging.warning('Item number of '+gid+' does not match previous file: '+str(gitem)+' !='+str(gfile[gid][0][0])+'.');
-      gfile[gid]+=[(g_p,g_fdr,nline-1)]; # don't repeat the gitem
+      gfile[gid]+=[(g_lo,g_p,g_fdr,nline-1,g_goodsgrna)]; # don't repeat the gitem
   # check whether some items appear in the first group, but not in the second group
   for (k,v) in gfile.iteritems():
     if len(v)==1:
       logging.warning('Item '+gid+' appears in '+lowfile+', but not in '+highfile+'.');
       #gfile[gid]+=[('NA',1.0,1.0,maxnline)];
-      gfile[gid]+=[(1.0,1.0,maxnline)];
+      gfile[gid]+=[(1.0,1.0,1.0,maxnline,0)];
       
   
   # write to files
   ofhd=open(outfile,'w');
-  print('\t'.join(['id','num','p.neg','fdr.neg','rank.neg','p.pos','fdr.pos','rank.pos']),file=ofhd);
+  print('\t'.join(['id','num','lo.neg','p.neg','fdr.neg','rank.neg','goodsgrna.neg','lo.pos','p.pos','fdr.pos','rank.pos','goodsgrna.pos']),file=ofhd);
   if hasattr(args,'sort_criteria') and args.sort_criteria=='pos':
     logging.debug('Sorting the merged items by positive selection...');
     skey=sorted(gfile.items(),key=lambda x : x[1][1][0]);

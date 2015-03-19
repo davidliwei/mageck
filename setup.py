@@ -38,7 +38,7 @@ def main():
     sys.exit(1);
   
   setup(name='mageck',
-    version='0.4.3',
+    version='0.4.4',
     description='Model-based Analysis of Genome-wide CRISPR-Cas9 Knockout',
     author='Wei Li, Han Xu',
     author_email='li.david.wei@gmail.com',

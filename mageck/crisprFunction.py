@@ -361,6 +361,8 @@ def rank_association_test(file,outfile,cutoff,args):
   #rrapath='/'.join(sys.argv[0].split('/')[:-1]+["../bin/RRA"])
   rrapath='RRA';
   command=rrapath+" -i "+file+" -o "+outfile+" -p "+str(cutoff);
+  if hasattr(args,'control_sgrna') and args.control_sgrna != None :
+    command+=" --control "+args.control_sgrna;
   systemcall(command);
   
 
@@ -483,6 +485,8 @@ def magecktest_main(args):
         magecktest_removetmp(cp_prefix);
         if cpindex>0:
           systemcall('rm '+cp_prefix+'.gene_summary.txt',cmsg=False);
+          systemcall('rm '+cp_prefix+'.sgrna_summary.txt',cmsg=False);
+          
  
 
 

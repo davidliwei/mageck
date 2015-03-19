@@ -45,23 +45,37 @@ def mageck_readgeneranking(fname,args,log2=False,columnid=2):
   args: argparse object
   log2: 
     whether to log-2 transform the score
-  columnid: int
+  columnid: int/string
     The column id of the score, default is 2 (3rd score)
   """
   geneinfo={};
   nline=0;
+  columnid_int=-1;
+  try:
+    columnid_int=int(columnid);
+  except ValueError:
+    pass;
   for line in open(fname):
     nline=nline+1;
-    if nline<2: # skip the first line
-      continue;
     field=line.strip().split();
-    if len(field)<columnid+1:
-      logging.error('Cannot read field '+str(columnid)+' in file '+fname+', line '+str(nline));
+    if nline<2: # skip the first line
+      for i in range(len(field)):
+        if field[i]==columnid:
+          columnid_int=i;
+          break;
+      if columnid_int==-1:
+        logging.error('Cannot determine the column to be used for ranking. Please double check with the id you provide.');
+        sys.exit(-1);
+      else:
+        logging.info('Column used for ranking: '+str(columnid)+' ('+str(columnid_int)+')');
+      continue;
+    if len(field)<columnid_int+1:
+      logging.error('Cannot read field '+str(columnid_int)+' in file '+fname+', line '+str(nline));
       sys.exit(-1);
     genename=field[0].upper();
     gscore=0;
     try:
-      nf=float(field[columnid]);
+      nf=float(field[columnid_int]);
       if log2:
         gscore=math.log(nf,2);
       else:
@@ -87,7 +101,7 @@ def mageck_pathwayrra(args):
   pdict=mageck_read_GMT(args);
   fname=args.gene_ranking;
   if args.single_ranking:
-    columnid=2;
+    columnid=args.ranking_column;
     mageck_pathwayrra_onedir(args,pdict,columnid,fname,args.output_prefix+'.pathway.tmp',args.output_prefix+'.pathway.txt');
     # columnid=2; # default: 3rd column (neg. selected p values)
   else:
@@ -95,9 +109,9 @@ def mageck_pathwayrra(args):
     tmppath_high=args.output_prefix+'.pathway.high.tmp';
     rraout_low=args.output_prefix+'.pathway.low.txt'
     rraout_high=args.output_prefix+'.pathway.high.txt'
-    columnid=2;
+    columnid=args.ranking_column;
     mageck_pathwayrra_onedir(args,pdict,columnid,fname,tmppath_low,rraout_low);
-    columnid=5; # columnid=6 if sgRNA number in positive selection is not omitted
+    columnid=args.ranking_column_2; # columnid=6 if sgRNA number in positive selection is not omitted
     mageck_pathwayrra_onedir(args,pdict,columnid,fname,tmppath_high,rraout_high);
     # merge different files
     merge_rank_files(rraout_low,rraout_high,args.output_prefix+'.pathway_summary.txt',args);
