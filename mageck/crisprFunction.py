@@ -20,6 +20,7 @@ import logging
 from mageckCount import *
 
 from fileOps import *
+from testVisual import *
 
 def getgeomean(v):
   meanval=sum([math.log(vx+0.1,2) for vx in v])/float(len(v));
@@ -373,25 +374,30 @@ def parse_sampleids(samplelabel,ids):
     samplelabel: a string of labels, like '0,2,3' or 'treat1,treat2,treat3'
     ids: a {samplelabel:index}
   Return:
-    a list of index
+    (a list of index, a list of index labels)
   """
+  # labels
+  idsk=[""]*len(ids);
+  for (k,v) in ids.iteritems():
+    idsk[v]=k;
+  
   try:
     groupids=[int(x) for x in samplelabel.split(',')];
+    groupidslabel=[idsk[x] for x in groupids];
   except ValueError:
     groupidstr=samplelabel.split(',');
     groupids=[];
+    groupidslabel=[];
     for gp in groupidstr:
       if gp not in ids:
         logging.error('Sample label '+gp+' does not match records in your count table.');
-        idsk=[""]*len(ids);
-        for (k,v) in ids.iteritems():
-          idsk[v]=k;
         logging.error('Sample labels in your count table: '+','.join(idsk));
         sys.exit(-1);
       groupids+=[ids[gp]];
+      groupidslabel+=[idsk[ids[gp]]];
   logging.debug('Given sample labels: '+samplelabel);
   logging.debug('Converted index: '+' '.join([str(x) for x in groupids]));
-  return groupids;
+  return  (groupids,groupidslabel);
 
 
 def magecktest_removetmp(prefix):
@@ -415,6 +421,7 @@ def magecktest_main(args):
       mapres=getcounttablefromfile(args.output_prefix+'.count.txt');
     cttab=mapres[0];
     sgrna2genelist=mapres[1];
+    samplelabelindex=mapres[2];
     
     if len(cttab)==0:
       sys.exit(-1);
@@ -426,6 +433,13 @@ def magecktest_main(args):
     # control group and treatment group labels
     labellist_control=[];
     labellist_treat=[];
+    # R visualization init
+    vrv=VisualRValue();
+    vrv.outprefix=args.output_prefix;
+    vrv.genesummaryfile=args.output_prefix+'.gene_summary.txt';
+    vrv.startRTemplate();
+    
+    # loop by comparisons
     for cpindex in range(len(supergroup_treat)):
       # convert the sample label to sample index
       if cpindex==0:
@@ -433,12 +447,12 @@ def magecktest_main(args):
       else:
         cp_prefix=args.output_prefix+'.'+str(cpindex);
       # labels
-      treatgroup=parse_sampleids(supergroup_treat[cpindex],mapres[2]);
+      (treatgroup,treatgrouplabellist)=parse_sampleids(supergroup_treat[cpindex],samplelabelindex);
       treatgroup_label=str(supergroup_treat[cpindex]);
       logging.info('Treatment samples:'+treatgroup_label);
       labellist_treat+=[treatgroup_label];
       if supergroup_control != None:
-        controlgroup=parse_sampleids(supergroup_control[cpindex],mapres[2]); 
+        (controlgroup,controlgrouplabellist)=parse_sampleids(supergroup_control[cpindex],samplelabelindex); 
         controlgroup_label=str(supergroup_control[cpindex]);
         logging.info('Control samples:'+controlgroup_label);
       else:
@@ -457,7 +471,7 @@ def magecktest_main(args):
       if hasattr(args,'normcounts_to_file'):
         if args.normcounts_to_file:
           # counts
-          mageck_printdict(nttab,args,sgrna2genelist,mapres[2],controlgroup+treatgroup);
+          mageck_printdict(nttab,args,sgrna2genelist,samplelabelindex,controlgroup+treatgroup);
       
       controlgroup_ids=list(range(len(controlgroup)));
       treatgroup_ids=list(range(len(controlgroup),len(controlgroup+treatgroup)));
@@ -480,13 +494,28 @@ def magecktest_main(args):
             label1='';
         label2=treatgroup_label+'_vs_'+controlgroup_label+'.';
         merge_rank_summary_files(args.output_prefix+'.gene_summary.txt',cp_prefix+'.gene_summary.txt',args.output_prefix+'.gene_summary.txt',args,lowfile_prefix=label1,highfile_prefix=label2);
+      # visualization: load top k
+      # print(str(samplelabelindex));
+      vrv.cplabel=treatgroup_label+'_vs_'+controlgroup_label+' neg.';
+      vrv.cpindex=[2+10*cpindex+1];
+      vrv.loadTopKWithExp(cp_prefix+'.gene.low.txt',nttab,sgrna2genelist,controlgrouplabellist+treatgrouplabellist);
+      vrv.cplabel=treatgroup_label+'_vs_'+controlgroup_label+' pos.';
+      vrv.cpindex=[2+10*cpindex+5+1];
+      vrv.loadTopKWithExp(cp_prefix+'.gene.high.txt',nttab,sgrna2genelist,controlgrouplabellist+treatgrouplabellist);
+      
       # clean the file
       if args.keep_tmp==False:
         magecktest_removetmp(cp_prefix);
         if cpindex>0:
           systemcall('rm '+cp_prefix+'.gene_summary.txt',cmsg=False);
           systemcall('rm '+cp_prefix+'.sgrna_summary.txt',cmsg=False);
-          
+      # end cleaning
+    # end cpindex loop
+    
+    # generate pdf file
+    vrv.closeRTemplate();
+    systemcall('Rscript '+vrv.outprefix+'.R');
+  # end if        
  
 
 

@@ -9,6 +9,9 @@ http://mageck.sourceforge.net
 
 Version history
 
+Version 0.5
+*Add multiple visualization functions
+
 Version 0.4.4
 *Improve the running speed of the RRA program.
 *For gene testing, MAGeCK now accepts multiple -t and -c pairs, allowing generating one summary table containing results of multiple comparisons. (However, the integration with pathway analysis is not fully supported.)
