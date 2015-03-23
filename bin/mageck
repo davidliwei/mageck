@@ -25,6 +25,7 @@ if True:
   from mageck.mageckCount import *
   from mageck.pathwayFunc import *
   from mageck.argsParser import *
+  from mageck.testVisual import *
 else:
   # for beta test only
   from mageck_db import *
@@ -32,6 +33,7 @@ else:
   from mageck_db.mageckCount import *
   from mageck_db.pathwayFunc import *
   from mageck_db.argsParser import *
+  from mageck_db.testVisual import *
 
 
 
@@ -50,6 +52,10 @@ def main():
   # pathway test
   if args.subcmd == 'pathway':
     mageck_pathwaytest(args);
+  
+  # visualizaiton
+  if args.subcmd == 'plot':
+    plot_main(args);
       
       
 

@@ -367,39 +367,6 @@ def rank_association_test(file,outfile,cutoff,args):
   systemcall(command);
   
 
-def parse_sampleids(samplelabel,ids):
-  """
-  Parse the label id according to the given sample labels
-  Parameter: 
-    samplelabel: a string of labels, like '0,2,3' or 'treat1,treat2,treat3'
-    ids: a {samplelabel:index}
-  Return:
-    (a list of index, a list of index labels)
-  """
-  # labels
-  idsk=[""]*len(ids);
-  for (k,v) in ids.iteritems():
-    idsk[v]=k;
-  
-  try:
-    groupids=[int(x) for x in samplelabel.split(',')];
-    groupidslabel=[idsk[x] for x in groupids];
-  except ValueError:
-    groupidstr=samplelabel.split(',');
-    groupids=[];
-    groupidslabel=[];
-    for gp in groupidstr:
-      if gp not in ids:
-        logging.error('Sample label '+gp+' does not match records in your count table.');
-        logging.error('Sample labels in your count table: '+','.join(idsk));
-        sys.exit(-1);
-      groupids+=[ids[gp]];
-      groupidslabel+=[idsk[ids[gp]]];
-  logging.debug('Given sample labels: '+samplelabel);
-  logging.debug('Converted index: '+' '.join([str(x) for x in groupids]));
-  return  (groupids,groupidslabel);
-
-
 def magecktest_removetmp(prefix):
   tmpfile=[prefix+'.plow.txt',prefix+'.phigh.txt',prefix+'.gene.low.txt',prefix+'.gene.high.txt'];
   for f in tmpfile:
@@ -453,10 +420,11 @@ def magecktest_main(args):
       labellist_treat+=[treatgroup_label];
       if supergroup_control != None:
         (controlgroup,controlgrouplabellist)=parse_sampleids(supergroup_control[cpindex],samplelabelindex); 
-        controlgroup_label=str(supergroup_control[cpindex]);
+        controlgroup_label=str(supergroup_control[cpindex]); # only for display
         logging.info('Control samples:'+controlgroup_label);
       else:
         controlgroup=[x for x in range(nsample) if x not in treatgroup];
+        controlgrouplabellist=[samplelabelindex[x] for x in range(nsample) if x not in treatgroup];
         controlgroup_label='rest';
         logging.info('Control samples: the rest of the samples');
       labellist_control+=[controlgroup_label];
@@ -494,7 +462,7 @@ def magecktest_main(args):
             label1='';
         label2=treatgroup_label+'_vs_'+controlgroup_label+'.';
         merge_rank_summary_files(args.output_prefix+'.gene_summary.txt',cp_prefix+'.gene_summary.txt',args.output_prefix+'.gene_summary.txt',args,lowfile_prefix=label1,highfile_prefix=label2);
-      # visualization: load top k
+      # visualization: load top k genes
       # print(str(samplelabelindex));
       vrv.cplabel=treatgroup_label+'_vs_'+controlgroup_label+' neg.';
       vrv.cpindex=[2+10*cpindex+1];

@@ -171,3 +171,40 @@ def merge_rank_files(lowfile,highfile,outfile,args):
     
    
 
+def parse_sampleids(samplelabel,ids):
+  """
+  Parse the label id according to the given sample labels
+  Parameter: 
+    samplelabel: a string of labels, like '0,2,3' or 'treat1,treat2,treat3'
+    ids: a {samplelabel:index} ({string:int})
+  Return:
+    (a list of index, a list of index labels)
+  """
+  # labels
+  idsk=[""]*len(ids);
+  for (k,v) in ids.iteritems():
+    idsk[v]=k;
+  if samplelabel == None:
+    groupidslabel=(ids.keys());
+    groupids=[ids[x] for x in groupidslabel];
+    return (groupids,groupidslabel);
+  
+  try:
+    groupids=[int(x) for x in samplelabel.split(',')];
+    groupidslabel=[idsk[x] for x in groupids];
+  except ValueError:
+    groupidstr=samplelabel.split(',');
+    groupids=[];
+    groupidslabel=[];
+    for gp in groupidstr:
+      if gp not in ids:
+        logging.error('Sample label '+gp+' does not match records in your count table.');
+        logging.error('Sample labels in your count table: '+','.join(idsk));
+        sys.exit(-1);
+      groupids+=[ids[gp]];
+      groupidslabel+=[idsk[ids[gp]]];
+  logging.debug('Given sample labels: '+samplelabel);
+  logging.debug('Converted index: '+' '.join([str(x) for x in groupids]));
+  return  (groupids,groupidslabel);
+
+

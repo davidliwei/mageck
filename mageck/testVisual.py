@@ -6,6 +6,8 @@ import sys;
 import re;
 import os;
 import logging;
+from fileOps import *
+from mageckCount import *
 
 
 class VisualRValue:
@@ -28,6 +30,7 @@ class VisualRValue:
   def startRTemplate(self):
     '''
     Open a template, create an R file
+    
     '''
     filename=os.path.join(os.path.dirname(__file__),'plot_template.RTemplate');
     if os.path.isfile(filename) and os.path.exists(filename):
@@ -119,8 +122,23 @@ class VisualRValue:
     return 0;
   
   def loadTopKWithExp(self,filename,nttab,sgrna2genelist,collabels,k=10):
+    '''
+    Plot the individual sgRNA read counts of top k genes, and the position of these gene scores 
+    '''
     self.loadTopK(filename,k);
     self.loadGeneExp(self.targetgene,nttab,sgrna2genelist,collabels);
+  
+  def loadSelGeneWithExp(self,targetgene,nttab,sgrna2genelist,collabels,k=10):
+    '''
+    Plot the individual sgRNA read counts of top k genes, and the position of these gene scores 
+    '''
+    self.targetgene=targetgene;
+    self.WriteRTemplate();
+    self.loadGeneExp(self.targetgene,nttab,sgrna2genelist,collabels);
+  
+  def loadSelGene(self,targetgene):
+    self.targetgene=targetgene;
+    self.WriteRTemplate();
   
   def loadGeneExp(self,genelist,nttab,sgrna2genelist,collabels):
     '''
@@ -148,4 +166,77 @@ class VisualRValue:
       # save to file
       print(rtp,file=self.outrfh);
     
+
+
+def plot_main(args):
+  '''
+  Main entry for plotting
+  '''
+  # loading count tables
+  mapres=getcounttablefromfile(args.count_table);
+  cttab=mapres[0];
+  sgrna2genelist=mapres[1];
+  samplelabelindex=mapres[2];
+  
+  # parse labels
+  (treatgroup,treatgrouplabellist)=parse_sampleids(args.samples,samplelabelindex);
+  # parse selected genes
+  if args.genes==None:
+    selgene=[];
+  else:
+    selgene=args.genes.split(',');
+  
+  # initialize R visualization init
+  vrv=VisualRValue();
+  vrv.outprefix=args.output_prefix;
+  vrv.genesummaryfile=args.gene_summary;
+  vrv.startRTemplate();
+  
+  # check the maximum column in gene summary
+  n=0;
+  ncomparisons=0;
+  comparisonlabel=[];
+  for line in open(vrv.genesummaryfile):
+    n+=1;
+    if n==1:
+      field=line.strip().split('\t');
+      if len(field) %10 !=2:
+        logging.error('Not enough field in gene summary file: '+args.gene_summary);
+        sys.exit(-1);
+      ncomparisons=int( (len(field)-2)/10);
+      # extract comparison labels
+      for i in range(ncomparisons):
+        neglabelindex=i*10+2;
+        negstr=re.sub('.lo.neg','',field[neglabelindex]);
+        comparisonlabel+=[negstr];
+    else:
+      break;
+  
+  # read the sgRNA-gene table for rank association
+  # normalization
+  cttab_sel={k:([v[i] for i in treatgroup]) for (k,v) in cttab.iteritems()}; # controlgroup do not overlap with treatgroup  
+  if hasattr(args,'norm_method'):
+    nttab=normalizeCounts(cttab_sel,method=args.norm_method);
+  else:
+    nttab=normalizeCounts(cttab_sel);
+  
+  if len(selgene)>0:
+    vrv.loadGeneExp(selgene,nttab,sgrna2genelist,treatgrouplabellist);
+  # testing the comparisons
+  for nc in range(ncomparisons):
+    # visualization: load top k genes
+    # print(str(samplelabelindex));
+    vrv.cplabel=comparisonlabel[nc]+' neg.';
+    vrv.cpindex=[2+10*nc+1];
+    vrv.loadSelGene(selgene);
+    vrv.cplabel=comparisonlabel[nc]+' pos.';
+    vrv.cpindex=[2+10*nc+5+1];
+    vrv.loadSelGene(selgene);
+  
+  
+  # generate pdf file
+  vrv.closeRTemplate();
+  systemcall('Rscript '+vrv.outprefix+'.R');
+
+
 

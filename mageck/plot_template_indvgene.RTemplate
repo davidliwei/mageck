@@ -17,13 +17,14 @@ colors=c( "#E41A1C", "#377EB8", "#4DAF4A", "#984EA3", "#FF7F00", "#FFFF33", "#A6
 
 ## code
 
+targetmatvec=unlist(targetmat)
 for(i in 1:length(targetmat)){
-  vali=targetmat[[i]];
+  vali=targetmat[[i]]+1;
   if(i==1){
-    plot(1:length(vali),vali,type='b',las=1,pch=20,main=paste('sgRNAs in',targetgene),ylab='log2 (read count)',xlab='Samples',xlim=c(0.7,length(vali)+0.3),ylim = range(unlist(targetmat)),col=colors[(i %% length(colors))+1],xaxt='n')
-    axis(1,at=1:length(vali),labels=(collabel))
+    plot(1:length(vali),vali,type='b',las=1,pch=20,main=paste('sgRNAs in',targetgene),ylab='log2 (read count)',xlab='Samples',xlim=c(0.7,length(vali)+0.3),ylim = range(targetmatvec[targetmatvec>0]),col=colors[(i %% length(colors))],xaxt='n',log='y')
+    axis(1,at=1:length(vali),labels=(collabel),las=2)
   }else{
-    lines(1:length(vali),vali,type='b',pch=20,col=colors[(i %% length(colors))+1])
+    lines(1:length(vali),vali,type='b',pch=20,col=colors[(i %% length(colors))])
   }
 }
 

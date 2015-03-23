@@ -35,7 +35,7 @@ plotrankedvalues<-function(val, tglist, ...){
     for(i in 1:length(tglist)){
       targetgene=tglist[i];
       tx=which(names(val)==targetgene);ty=val[targetgene];
-      points(tx,ty,col=colors[(i %% length(colors))+1 ],cex=2,pch=20)
+      points(tx,ty,col=colors[(i %% length(colors)) ],cex=2,pch=20)
       # text(tx+50,ty,targetgene,col=colors[i])
     }
     legend('topright',tglist,pch=20,pt.cex = 2,cex=1,col=colors)
@@ -65,11 +65,13 @@ plotrandvalues<-function(val,targetgenelist, ...){
   }
   plot(randval,log='y',ylim=c(max(randval),min(randval)),pch=20,col='grey', ...)
   
-  for(i in 1:length(targetgenelist)){
-    targetgene=targetgenelist[i];
-    tx=which(names(randval)==targetgene);ty=randval[targetgene];
-    points(tx,ty,col=colors[(i %% length(colors))+1 ],cex=2,pch=20)
-    text(tx+50,ty,targetgene,col=colors[i])
+  if(length(targetgenelist)>0){
+    for(i in 1:length(targetgenelist)){
+      targetgene=targetgenelist[i];
+      tx=which(names(randval)==targetgene);ty=randval[targetgene];
+      points(tx,ty,col=colors[(i %% length(colors)) ],cex=2,pch=20)
+      text(tx+50,ty,targetgene,col=colors[i])
+    }
   }
   
 }
