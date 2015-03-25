@@ -89,6 +89,7 @@ def crisprseq_parseargs():
   subp_plot.add_argument('-s','--samples',help='A list of samples to be plotted, separated by comma. Default: using all samples in the count table.');
   subp_plot.add_argument('-n','--output-prefix',default='sample1',help='The prefix of the output file(s). Default sample1.');
   subp_plot.add_argument('--norm-method',choices=['none','median','total'],default='median',help='Method for normalization, default median.');
+  subp_plot.add_argument('--keep-tmp',action='store_true',help='Keep intermediate files.');
   
   args=parser.parse_args();
   

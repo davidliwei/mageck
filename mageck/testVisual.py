@@ -12,7 +12,7 @@ from mageckCount import *
 
 class VisualRValue:
   '''
-  Class for visualization
+  Class for R visualization
   '''
   outprefix='sample1';
   genesummaryfile='';
@@ -20,10 +20,22 @@ class VisualRValue:
   targetgene=[];
   cplabel=''
   
-  # internal variable
+  # internal variable, for R file
   rtemplatestr='';  # template string
   rtemplate_gene_str='';  # template string
   outrfh=None;  # file handle for R file
+  
+  # for Rnw file
+  rnwtemplatestr='';
+  outrnwfh=None;
+  outrnwstring='';
+  # for statistics of gene_summary_file 
+  comparisonlabel=[]; # label for comparison
+  ngenes=[]; # number of genes
+  selection=[]; # selections
+  nfdr1=[]; # genes with FDR < 1, 5, 25%
+  nfdr5=[];
+  nfdr25=[];
   '''
   Member functions
   '''
@@ -32,6 +44,7 @@ class VisualRValue:
     Open a template, create an R file
     
     '''
+    # R files
     filename=os.path.join(os.path.dirname(__file__),'plot_template.RTemplate');
     if os.path.isfile(filename) and os.path.exists(filename):
       logging.info('Loading R template file: '+filename+'.');
@@ -44,7 +57,16 @@ class VisualRValue:
     else:
       logging.error('Cannot find template file: '+filename_indgene);
       return -1;
+    # Rnw files
+    filename_rnw=os.path.join(os.path.dirname(__file__),'plot_template.Rnw');
+    if os.path.isfile(filename_rnw) and os.path.exists(filename_rnw):
+      logging.info('Loading Rnw template file: '+filename_rnw+'.');
+    else:
+      logging.error('Cannot find template file: '+filename_rnw);
+      return -1;
     logging.debug('Setting up the visualization module...');
+    # 
+    # loading 
     with open(filename, "r") as rtfile:
       rtp=rtfile.read();
       outpdffile=self.outprefix+'.pdf';
@@ -58,16 +80,24 @@ class VisualRValue:
       self.rtemplatestr=rtp;
       
       # write pdf loading
-      pdfloadstr="pdf(file='"+outpdffile+"',width=6,height=6);";
+      pdfloadstr="pdf(file='"+os.path.basename(outpdffile)+"',width=6,height=6);";
       # write file reading
       # rtp=re.sub('__GENE_SUMMARY_FILE__',self.genesummaryfile,rtp); # gene_summary
-      tableadstr="gstable=read.table('"+self.genesummaryfile+"',header=T)";
+      tableadstr="gstable=read.table('"+os.path.basename(self.genesummaryfile)+"',header=T)";
       print(pdfloadstr,file=outrfh);
       print(tableadstr,file=outrfh);
     # load individual gene code
     with open(filename_indgene, "r") as rtfile:
       rtp=rtfile.read();
       self.rtemplate_gene_str=rtp;
+    # load Rnw file
+    with open(filename_rnw,"r") as rtfile:
+      rnw=rtfile.read();
+      self.rnwtemplatestr=rnw;
+      outrfile=self.outprefix+'_summary.Rnw';
+      self.outrnwstring=self.rnwtemplatestr;
+      outrfh=open(outrfile,'w');
+      self.outrnwfh=outrfh;
       
     return 0;
   
@@ -75,7 +105,21 @@ class VisualRValue:
     '''
     Close the R file
     '''
+    # write to R file
     print("dev.off()",file=self.outrfh);
+    #
+    rnwfile=self.outprefix+'_summary.Rnw';
+    rfile=self.outprefix+'.R';
+    summaryfile=self.outprefix+'_summary';
+    latexfile=self.outprefix+'_summary.tex';
+    (rnwfile_dir,rnwfile_base)=os.path.split(rnwfile);
+    # write code in R file to generate PDF files
+    print("Sweave(\""+rnwfile_base+"\");\nlibrary(tools);\n",file=self.outrfh);
+    print("texi2dvi(\""+os.path.basename(latexfile)+"\",pdf=TRUE);\n",file=self.outrfh);
+    # write to Rnw file
+    print(self.outrnwstring,file=self.outrnwfh);
+    
+    self.outrnwfh.close();
     self.outrfh.close();
     
   def WriteRTemplate(self):
@@ -99,6 +143,17 @@ class VisualRValue:
     
     # write to R file
     print(rtp,file=self.outrfh);
+    # save to Rnw file
+    rtprnw="";
+    rtprnw+="\n<<echo=FALSE>>=\n";
+    tableadstr="gstable=read.table('"+os.path.basename(self.genesummaryfile)+"',header=T)";
+    rtprnw+=tableadstr+"\n@"+"\n";
+    rtprnw+=r"%\n\\"+"begin{figure}\n"+r"\\"+"begin{center}\n"
+    rtprnw+="<<fig=TRUE,echo=FALSE,width=6,height=6>>="+rtp+"@"+"\n";
+    rtprnw+="\\end{center}\n\\end{figure}\n%%\n\\clearpage\n";
+    rtprnw+="%__INDIVIDUAL_PAGE__\n\n"
+    updatestr=re.sub('%__INDIVIDUAL_PAGE__',rtprnw,self.outrnwstring);
+    self.outrnwstring=updatestr;
   
   def loadTopK(self, filename, k=10):
     '''
@@ -163,8 +218,97 @@ class VisualRValue:
       clabstr+=','.join(['"'+ x+'"' for x in collabels]);
       clabstr+=')';
       rtp=re.sub('__COL_LABEL__',clabstr,rtp);
-      # save to file
+      # save to R file
       print(rtp,file=self.outrfh);
+      # save to Rnw file
+      rtprnw=r"%\n\\"+"begin{figure}\n"+r"\\"+"begin{center}\n"
+      rtprnw+="<<fig=TRUE,echo=FALSE,width=6,height=6>>="+rtp+"@"+"\n";
+      rtprnw+="\\end{center}\n\\end{figure}\n%%\n";
+      rtprnw+="%__INDIVIDUAL_PAGE__\n\n"
+      updatestr=re.sub('%__INDIVIDUAL_PAGE__',rtprnw,self.outrnwstring);
+      self.outrnwstring=updatestr;
+  
+  def getGeneSummaryStat(self,isplot=True):
+    '''
+    Get the summary statistics of gene summary file
+    '''
+    n=0;
+    ncomparisons=0;
+    comparisonlabel=self.comparisonlabel;
+    for line in open(self.genesummaryfile):
+      n+=1;
+      field=line.strip().split('\t');
+      if n==1:
+        if len(field) %10 !=2:
+          logging.error('Not enough field in gene summary file: '+args.gene_summary);
+          sys.exit(-1);
+        ncomparisons=int( (len(field)-2)/10);
+        # extract comparison labels
+        for i in range(ncomparisons):
+          neglabelindex=i*10+2;
+          negstr=re.sub('.lo.neg','',field[neglabelindex]);
+          comparisonlabel+=[negstr];
+          comparisonlabel+=[negstr];
+        # set up the variables
+        self.nfdr1=[0]*2*ncomparisons;
+        self.nfdr5=[0]*2*ncomparisons;
+        self.nfdr25=[0]*2*ncomparisons;
+      else:
+        for i in range(ncomparisons):
+          nneg=i*10+2+2; npos=i*10+2+7;
+          if float(field[nneg])<0.01:
+            self.nfdr1[2*i]+=1;
+          if float(field[npos])<0.01:
+            self.nfdr1[2*i+1]+=1;
+          if float(field[nneg])<0.05:
+            self.nfdr5[2*i]+=1;
+          if float(field[npos])<0.05:
+            self.nfdr5[2*i+1]+=1;
+          if float(field[nneg])<0.25:
+            self.nfdr25[2*i]+=1;
+          if float(field[npos])<0.25:
+            self.nfdr25[2*i+1]+=1;
+      # end if
+    # end for
+    self.ngenes=[n-1]*2*ncomparisons;
+    self.selection=['negative','positive']*ncomparisons;
+    # 
+    if isplot==True:
+      self.writeGeneSummaryStatToBuffer();
+
+  def writeGeneSummaryStatToBuffer(self):
+    '''
+    Write statistics from gene summary file to buffer
+    '''
+    # insert string
+    insertstr='';
+    insertstr+='comparisons=c(' + ','.join(['"'+x+'"' for x in self.comparisonlabel ])  +');\n';
+    insertstr+='ngenes=c('+ ','.join([str(x) for x in self.ngenes]) +');\n';
+    insertstr+='direction=c('+','.join(['"'+x+'"' for x in self.selection])+');\n';
+    insertstr+='fdr1=c('+','.join([str(x) for x in self.nfdr1])+');\n';
+    insertstr+='fdr5=c('+','.join([str(x) for x in self.nfdr5])+');\n';
+    insertstr+='fdr25=c('+','.join([str(x) for x in self.nfdr25])+');\n';
+    # 
+    nwktowrite=re.sub('#__GENE_SUMMARY_STAT__',insertstr,self.outrnwstring);
+    self.outrnwstring=nwktowrite;
+  
+  def generatePDF(self,keeptmp=False):
+    '''
+    Call R and pdflatex
+    '''
+    rnwfile=self.outprefix+'_summary.Rnw';
+    rfile=self.outprefix+'.R';
+    summaryfile=self.outprefix+'_summary';
+    (rnwfile_dir,rnwfile_base)=os.path.split(rnwfile);
+    
+    systemcall('cd '+rnwfile_dir+'; '+'Rscript '+os.path.basename(rfile));
+    #systemcall('cd '+rnwfile_dir+'; '+ 'R CMD Sweave '+rnwfile_base);
+    #systemcall('export SWEAVE_STYLEPATH_DEFAULT="TRUE";'+ 'cd '+rnwfile_dir+'; '+'pdflatex '+os.path.basename(summaryfile));
+    # cleaning the fraction pdf
+    if keeptmp==False:
+      systemcall('cd '+rnwfile_dir+'; '+'rm -rf '+os.path.basename(summaryfile)+'-*.pdf');
+    
+    
     
 
 
@@ -191,6 +335,9 @@ def plot_main(args):
   vrv.outprefix=args.output_prefix;
   vrv.genesummaryfile=args.gene_summary;
   vrv.startRTemplate();
+  
+  # generate summary file; must be done before plotting any individual genes
+  vrv.getGeneSummaryStat();
   
   # check the maximum column in gene summary
   n=0;
@@ -234,9 +381,13 @@ def plot_main(args):
     vrv.loadSelGene(selgene);
   
   
+  
+  
   # generate pdf file
   vrv.closeRTemplate();
-  systemcall('Rscript '+vrv.outprefix+'.R');
-
+  vrv.generatePDF(args.keep_tmp);
+  #systemcall('Rscript '+vrv.outprefix+'.R');
+  #systemcall('R CMD Sweave '+vrv.outprefix+'_summary.Rnw');
+  #systemcall('pdflatex '+vrv.outprefix+'_summary');
 
 

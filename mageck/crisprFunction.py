@@ -405,6 +405,7 @@ def magecktest_main(args):
     vrv.outprefix=args.output_prefix;
     vrv.genesummaryfile=args.output_prefix+'.gene_summary.txt';
     vrv.startRTemplate();
+    vrvrnwcplabel=[]; # labels to write in rnw
     
     # loop by comparisons
     for cpindex in range(len(supergroup_treat)):
@@ -465,9 +466,11 @@ def magecktest_main(args):
       # visualization: load top k genes
       # print(str(samplelabelindex));
       vrv.cplabel=treatgroup_label+'_vs_'+controlgroup_label+' neg.';
+      vrvrnwcplabel+=[vrv.cplabel];
       vrv.cpindex=[2+10*cpindex+1];
       vrv.loadTopKWithExp(cp_prefix+'.gene.low.txt',nttab,sgrna2genelist,controlgrouplabellist+treatgrouplabellist);
       vrv.cplabel=treatgroup_label+'_vs_'+controlgroup_label+' pos.';
+      vrvrnwcplabel+=[vrv.cplabel];
       vrv.cpindex=[2+10*cpindex+5+1];
       vrv.loadTopKWithExp(cp_prefix+'.gene.high.txt',nttab,sgrna2genelist,controlgrouplabellist+treatgrouplabellist);
       
@@ -481,8 +484,14 @@ def magecktest_main(args):
     # end cpindex loop
     
     # generate pdf file
+    # write to rnw file buffer
+    vrv.genesummaryfile=args.output_prefix+'.gene_summary.txt';
+    vrv.getGeneSummaryStat(isplot=False);
+    vrv.comparisonlabel=vrvrnwcplabel; # replace the label field
+    vrv.writeGeneSummaryStatToBuffer();
+    # write to rnw and R file
     vrv.closeRTemplate();
-    systemcall('Rscript '+vrv.outprefix+'.R');
+    vrv.generatePDF(args.keep_tmp);
   # end if        
  
 
