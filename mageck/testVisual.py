@@ -159,11 +159,11 @@ class VisualRValue:
     '''
     Load the top k gene names from the file
     '''
-    n=0;
+    n=-1;
     self.targetgene=[];
     for line in open(filename):
       n+=1;
-      if n==1:
+      if n==0:
         continue;
       if n<=k:
         field=line.strip().split();
@@ -199,9 +199,19 @@ class VisualRValue:
     '''
     Load the sgRNA read counts of selected genes into file
     '''
+    # insertion str
+    insertstr=''
+    # set up par
+    #
+    #parstr="<<echo=FALSE>>=\n"+" par(mfrow=c(2,2));\n" +"@"+"\n";
+    #insertstr+=parstr;
+    nsubfigs=4;
+    npl=0;
+    # plot individual genes
     for gene in genelist:
       sglist=[ k for (k,v) in sgrna2genelist.iteritems() if v==gene];
       ntgene={k:v for (k,v) in nttab.iteritems() if k in sglist};
+      npl+=1;
       # load to file
       valstring='list(';
       vstrlist=[];
@@ -221,12 +231,27 @@ class VisualRValue:
       # save to R file
       print(rtp,file=self.outrfh);
       # save to Rnw file
-      rtprnw=r"%\n\\"+"begin{figure}\n"+r"\\"+"begin{center}\n"
-      rtprnw+="<<fig=TRUE,echo=FALSE,width=6,height=6>>="+rtp+"@"+"\n";
-      rtprnw+="\\end{center}\n\\end{figure}\n%%\n";
-      rtprnw+="%__INDIVIDUAL_PAGE__\n\n"
-      updatestr=re.sub('%__INDIVIDUAL_PAGE__',rtprnw,self.outrnwstring);
-      self.outrnwstring=updatestr;
+      rtprnw='';
+      if npl %4 ==1:
+        rtprnw=r"%\n\\"+"begin{figure}\n"+r"\\"+"begin{center}\n"
+        rtprnw+="<<fig=TRUE,echo=FALSE,width=6,height=6>>=\n";
+        rtprnw+="par(mfrow=c(2,2));\n"
+      rtprnw+=rtp;
+      if npl%4==0 or npl == len(genelist):
+        rtprnw+="\npar(mfrow=c(1,1));\n"
+        rtprnw+="@"+"\n";
+        rtprnw+="\\end{center}\n\\end{figure}\n%%\n";
+      insertstr+=rtprnw;
+      # rtprnw+="%__INDIVIDUAL_PAGE__\n\n"
+      # updatestr=re.sub('%__INDIVIDUAL_PAGE__',rtprnw,self.outrnwstring);
+      # self.outrnwstring=updatestr;
+    # recover par
+    ## parstr="<<echo=FALSE>>=\n"+" par(mfrow=c(1,1));\n" +"@"+"\n";
+    ## insertstr+=parstr;
+    # write to Rnw file
+    insertstr+="%__INDIVIDUAL_PAGE__\n\n"
+    updatestr=re.sub('%__INDIVIDUAL_PAGE__',insertstr,self.outrnwstring);
+    self.outrnwstring=updatestr;
   
   def getGeneSummaryStat(self,isplot=True):
     '''

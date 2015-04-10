@@ -10,7 +10,7 @@ CFLAGS = -Wall -g -O2
 INCLUDES = -I./include
 
 # define the C source files
-APIS = ./src/rngs.cpp ./src/words.cpp ./src/rvgs.cpp ./src/math_api.cpp 
+APIS = ./src/rngs.cpp ./src/words.cpp ./src/rvgs.cpp ./src/math_api.cpp ./src/fileio.cpp
 MAIN1 = ./src/RRA.cpp
 # MAIN2 = ./src/CrisprNorm.c
 
@@ -28,7 +28,7 @@ MAIN2_OBJS = $(MAIN2:.c=.o)
 
 # define the executable file 
 MAIN1_APP = ../bin/RRA
-MAIN2_APP = ../bin/CrisprNorm
+# MAIN2_APP = ../bin/CrisprNorm
 
 #
 # The following part of the makefile is generic; it can be used to 
@@ -42,8 +42,8 @@ all:    $(MAIN1_APP)
 $(MAIN1_APP): $(API_OBJS) $(MAIN1_OBJS)
 	$(CC) $(CFLAGS) $(INCLUDES) -o $(MAIN1_APP) $(API_OBJS) $(MAIN1_OBJS) -lm 
 
-$(MAIN2_APP): $(API_OBJS) $(MAIN2_OBJS)
-	$(CC) $(CFLAGS) $(INCLUDES) -o $(MAIN2_APP) $(API_OBJS) $(MAIN2_OBJS) -lm 
+# $(MAIN2_APP): $(API_OBJS) $(MAIN2_OBJS)
+# 	$(CC) $(CFLAGS) $(INCLUDES) -o $(MAIN2_APP) $(API_OBJS) $(MAIN2_OBJS) -lm 
 
 # this is a suffix replacement rule for building .o's from .c's
 # it uses automatic variables $<: the name of the prerequisite of
@@ -55,7 +55,7 @@ $(MAIN2_APP): $(API_OBJS) $(MAIN2_OBJS)
 	$(CC) $(CFLAGS) $(INCLUDES) -c $<  -o $@
 
 clean:
-	$(RM) $(API_OBJS) $(MAIN1_OBJS) $(MAIN2_OBJS) $(MAIN1_APP) $(MAIN2_APP)
+	$(RM) $(API_OBJS) $(MAIN1_OBJS) $(MAIN2_OBJS) $(MAIN1_APP) 
 
 depend: $(SRCS)
 	makedepend $(INCLUDES) $^

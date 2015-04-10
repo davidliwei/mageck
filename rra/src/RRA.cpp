@@ -8,17 +8,12 @@
  *  Copyright 2013 Dana Farber Cancer Institute. All rights reserved.
  *
  */
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <memory.h>
-
-#define NDEBUG
-#include <assert.h>
 #include "math_api.h"
 #include "words.h"
 #include "rvgs.h"
 #include "rngs.h"
+#include "classdef.h"
+#include "fileio.h"
 
 //C++ functions
 #include <string>
@@ -28,51 +23,7 @@
 #include <fstream>
 using namespace std;
 
-#define MAX_NAME_LEN 10000           //maximum length of item name, group name or list name
-#define CDF_MAX_ERROR 1E-10        //maximum error in Cumulative Distribution Function estimation in beta statistics
-#define MAX_GROUP_NUM 100000       //maximum number of groups
-#define MAX_LIST_NUM 1000          //maximum number of list 
-#define RAND_PASS_NUM 100          //number of passes in random simulation for computing FDR
-
-#define MAX_WORD_NUM 1000        //maximum number of word
-
-//WL: define boolean variables
-//typedef int bool;
-//#define true 1
-//#define false 0
-
 int PRINT_DEBUG=0;
-
-typedef struct // item definition; i.e., sgRNA
-{
-	char name[MAX_NAME_LEN];       //name of the item
-	int listIndex;                 //index of list storing the item
-	double value;                  //value of measurement
-	double percentile;             //percentile in the list
-	double prob;			//The probability of each sgRNA; added by Wei
-} ITEM_STRUCT;
-
-typedef struct // group definition; i.e., gene
-{
-	char name[MAX_NAME_LEN];       //name of the group
-	ITEM_STRUCT *items;            //items in the group
-	int itemNum;                   //number of items in the group
-  int maxItemNum;                // max number of items
-	double loValue;                //lo-value in RRA
-  double pvalue;                //p value for permutation
-	double fdr;                    //false discovery rate
-  int isbad;                    //if the lovalue is too low (i.e., higher than the given percentile)
-  int goodsgrnas;               //sgRNAs with significant changes
-} GROUP_STRUCT;
-
-typedef struct //list definition; i.e., gene groups
-{
-	char name[MAX_NAME_LEN];       //name of the list
-	double *values;                //values of items in the list, used for sorting
-	int itemNum;                   //number of items in the list
-  int maxItemNum;               //max item number
-} LIST_STRUCT;
-
 
 //Global variables
 
@@ -87,11 +38,6 @@ int nLovarray=-1;
 
 
 //Function declarations
-//Read input file. File Format: <item id> <group id> <list id> <value>. Return 1 if success, -1 if failure
-int ReadFile(char *fileName, GROUP_STRUCT *groups, int maxGroupNum, int *groupNum, LIST_STRUCT *lists, int maxListNum, int *listNum);
-
-//Save group information to output file. Format <group id> <number of items in the group> <lo-value> <false discovery rate>
-int SaveGroupInfo(char *fileName, GROUP_STRUCT *groups, int groupNum);
 
 //Process groups by computing percentiles for each item and lo-values for each group
 int ProcessGroups(GROUP_STRUCT *groups, int groupNum, LIST_STRUCT *lists, int listNum, double maxPercentile);
@@ -121,22 +67,6 @@ int ComputeLoValue_Prob(double *percentiles,     //array of percentiles
 				  double *probValue,// probability of each prob, must be equal to the size of percentiles
            int &goodsgrna);
 
-//split strings
-int stringSplit(string str, string delim, vector<string> & v){
-  int start=0;
-  int pos=str.find_first_of(delim,start);
-  v.clear();
-  while(pos!=str.npos){
-    if(pos!=start)
-      v.push_back(str.substr(start,pos-start));
-     start=pos+1;
-     pos=str.find_first_of(delim,start);
-  }
-  if(start<str.length())
-    v.push_back(str.substr(start,str.length()-start));
-  return v.size();
-}
-
 //read control sequences
 int loadControlSeq(const char* fname){
 	ifstream fh;
@@ -159,8 +89,7 @@ int loadControlSeq(const char* fname){
   return 0;
 }
 
-int main (int argc, const char * argv[]) 
-{
+int main (int argc, const char * argv[]) {
 	int i,flag;
 	GROUP_STRUCT *groups;
 	int groupNum;
@@ -200,15 +129,14 @@ int main (int argc, const char * argv[])
 	
 	if ((inputFileName[0]==0)||(outputFileName[0]==0))
 	{
-		printf("Command error!\n");
+		cerr<<"Error: input file or output file name not set.\n";
 		PrintCommandUsage(argv[0]);
 		return -1;
 	}
 	
 	if ((maxPercentile>1.0)||(maxPercentile<0.0))
 	{
-		printf("maxPercentile should be within 0.0 and 1.0\n");
-		printf("program exit!\n");
+		cerr<<("Error: maxPercentile should be within 0.0 and 1.0\n");
 		return -1;
 	}
 	
@@ -217,71 +145,48 @@ int main (int argc, const char * argv[])
 	assert(groups!=NULL);
 	assert(lists!=NULL);
 	
-	printf("reading input file...");
+	printf("Reading input file...\n");
 	
 	flag = ReadFile(inputFileName, groups, MAX_GROUP_NUM, &groupNum, lists, MAX_LIST_NUM, &listNum);
 	
-	if (flag<=0)
-	{
-		printf("\nfailed.\n");
-		printf("program exit!\n");
-		
+	if (flag<=0){
+	  cerr<<"\nError: reading ranking file ...\n";
 		return -1;
 	}
-	else
-	{
-		printf("done.\n");
-	}
 	
-	printf("computing lo-values for each group...\n");
+	cerr<<("Computing lo-values for each group...\n");
 	
 	if (ProcessGroups(groups, groupNum, lists, listNum, maxPercentile)<=0)
   {
-		printf("\nfailed.\n");
-		printf("program exit!\n");
-		
+		cerr<<("\nError: processing groups failed.\n");
 		return -1;
 	}
-	else
-	{
-		printf("done.\n");
-	}
 	
-	printf("computing false discovery rate...\n");
+	cerr<<("Computing false discovery rate...\n");
 	
 	if (ComputeFDR(groups, groupNum, maxPercentile, RAND_PASS_NUM*groupNum)<=0)
 	{
-		printf("\nfailed.\n");
-		printf("program exit!\n");
-		
+		cerr<<("\nError: computing FDR failed.\n");
 		return -1;
 	}
-	else
-	{
-		printf("done.\n");
-	}
 	
-	printf("save to output file...");
+	cerr<<("Saving to output file...");
 	
 	if (SaveGroupInfo(outputFileName, groups, groupNum)<=0)
 	{
-		printf("\nfailed.\n");
-		printf("program exit!\n");
-		
+		cerr<<("\nError: saving output file failed.\n");
 		return -1;
 	}
-	else
-	{
-		printf("done.\n");
-	}
 	
-	printf("finished.\n");
+	cerr<<("RRA completed.\n");
 	
+  for(i=0;i<groupNum;i++)
+    delete[] groups[i].items;
 	free(groups);
 	
 	for (i=0;i<listNum;i++)
 	{
-		free(lists[i].values);
+		delete[] lists[i].values;
 	}
 	free(lists);
   if(UseControlSeq){
@@ -301,7 +206,7 @@ void PrintCommandUsage(const char *command)
 	//print the options of the command
 	printf("%s - Robust Rank Aggreation.\n", command);
 	printf("usage:\n");
-	printf("-i <input data file>. Format: <item id> <group id> <list id> <value> [<probability>]\n");
+	printf("-i <input data file>. Format: <item id> <group id> <list id> <value> [<probability>] [<chosen>]\n");
 	printf("-o <output file>. Format: <group id> <number of items in the group> <lo-value> <false discovery rate>\n");
 	printf("-p <maximum percentile>. RRA only consider the items with percentile smaller than this parameter. Default=0.1\n");
 	printf("--control <control_sgrna list>. A list of control sgRNA names.\n");
@@ -310,293 +215,8 @@ void PrintCommandUsage(const char *command)
 	
 }
 
-//Read input file. File Format: <item id> <group id> <list id> <value>. Return 1 if success, -1 if failure
-int ReadFile(char *fileName, GROUP_STRUCT *groups, int maxGroupNum, int *groupNum, 
-      LIST_STRUCT *lists, int maxListNum, int *listNum)
-{
-	//FILE *fh;
-	int i,j,k;
-	//char **words, *tmpS, *tmpS2;
-	int wordNum;
-	int totalItemNum;
-	int tmpGroupNum, tmpListNum;
-	//char tmpGroupName[MAX_NAME_LEN], tmpListName[MAX_NAME_LEN], tmpItemName[MAX_NAME_LEN];
-	double tmpValue;
-  
-  //char **subwords;
-	double sgrnaProbValue;
-	
-	//words = AllocWords(MAX_WORD_NUM, MAX_NAME_LEN+1);
-	//subwords = AllocWords(MAX_WORD_NUM, MAX_NAME_LEN+1);
-	
-	//assert(words!=NULL);
-	
-	//if (words == NULL)
-	//{
-	//	return -1;
-	//}
-	
-	//tmpS = (char *)malloc(MAX_WORD_NUM*(MAX_NAME_LEN+1)*sizeof(char));
-	//tmpS2 = (char *)malloc(MAX_WORD_NUM*(MAX_NAME_LEN+1)*sizeof(char));
-	
-	//assert(tmpS!=NULL && tmpS2!=NULL);
-	
-	ifstream fh;
-  fh.open(fileName);
-  if(!fh.is_open()){
-    cerr<<"Error opening "<<fileName<<endl;
-  }
-  string oneline;
-  getline(fh,oneline);
-  
-  vector<string> vwords;
-  vector<string> vsubwords;
-  wordNum=stringSplit(oneline," \t\r\n\v",vwords);
-	//Read the header row to get the sample number
-	//fgets(tmpS, MAX_WORD_NUM*(MAX_NAME_LEN+1)*sizeof(char), fh);
-	//wordNum = StringToWords(words, tmpS,MAX_WORD_NUM, MAX_NAME_LEN+1,  " \t\r\n\v\f");
-	
-	assert(wordNum == 4 | wordNum == 5);
-	
-	if (wordNum != 4 && wordNum != 5)
-	{
-		cerr<<"Input file format: <item id> <group id> <list id> <value> [<prob>]\n";
-    fh.close();
-		return -1;
-	}
-	
-	//read records of items
-	
-	tmpGroupNum = 0;
-	tmpListNum = 0;
-	totalItemNum = 0;
-	
-	//fgets(tmpS, MAX_WORD_NUM*(MAX_NAME_LEN+1)*sizeof(char), fh);
-	//wordNum = StringToWords(words, tmpS, MAX_NAME_LEN+1, MAX_WORD_NUM, " \t\r\n\v\f");
-  getline(fh,oneline);
-  wordNum=stringSplit(oneline," \t\r\f\v",vwords);
-	
-	//WL
- int subWordNum;
- subWordNum=0;
-
-	while ((wordNum>=4 )&&(!fh.eof()))
-	{
-		//strcpy(tmpItemName, words[0]);
-		//strcpy(tmpGroupName, words[1]);
-		//strcpy(tmpListName, words[2]);
-    
-    // separate the group name by ","
-		// modified by WL 
-    //strcpy(tmpS,tmpGroupName);
-   	//subWordNum=StringToWords(subwords,tmpS,MAX_NAME_LEN+1,MAX_WORD_NUM,",");
-    subWordNum=stringSplit(vwords[1],",",vsubwords);
-    assert(subWordNum>0);
-    
-		for(k=0;k<subWordNum;k++)
-    {
-	  		for (i=0;i<tmpGroupNum;i++)
-	  		{
-	  			if (!strcmp(vsubwords[k].c_str(), groups[i].name))
-	  			{
-	  				break;
-	  			} 
-	  		}
-	  	
-	  		if (i>=tmpGroupNum)
-	  		{
-	  			strcpy(groups[tmpGroupNum].name, vsubwords[k].c_str());
-	  			groups[tmpGroupNum].itemNum = 1;
-	  			tmpGroupNum ++;
-	  			if (tmpGroupNum >= maxGroupNum)
-	  			{
-	  				printf("too many groups. maxGroupNum = %d\n", maxGroupNum);
-	  				return -1;
-	  			}
-	  		}
-	  		else
-	  		{
-	  			groups[i].itemNum++;
-	  		}
-		}
-
-		for (i=0;i<tmpListNum;i++)
-		{
-			if (!strcmp(vwords[2].c_str(), lists[i].name))
-			{
-				break;
-			}
-		}
-		
-		if (i>=tmpListNum)
-		{
-			strcpy(lists[tmpListNum].name, vwords[2].c_str());
-			lists[tmpListNum].itemNum = 1;
-			tmpListNum ++;
-			if (tmpListNum >= maxListNum)
-			{
-				printf("too many lists. maxListNum = %d\n", maxListNum);
-				return -1;
-			}
-		}
-		else
-		{
-			lists[i].itemNum++;
-		}
-		
-		totalItemNum++;
-		
-    getline(fh,oneline);
-    wordNum=stringSplit(oneline," \t\r\f\v",vwords);
-		//fgets(tmpS, MAX_WORD_NUM*(MAX_NAME_LEN+1)*sizeof(char), fh);
-		//wordNum = StringToWords(words, tmpS, MAX_NAME_LEN+1, MAX_WORD_NUM, " \t\r\n\v\f");
-	}
-	
-	fh.close();
-	
-	for (i=0;i<tmpGroupNum;i++)
-	{
-    //printf("Group %d items:%d\n",i,groups[i].itemNum);
-		groups[i].items = (ITEM_STRUCT *)malloc(groups[i].itemNum*sizeof(ITEM_STRUCT));
-		groups[i].maxItemNum = groups[i].itemNum;
-		groups[i].itemNum = 0;
-	}
-	
-	for (i=0;i<tmpListNum;i++)
-	{
-    //printf("List %d items:%d\n",i,lists[i].itemNum);
-		lists[i].values = (double *)malloc(lists[i].itemNum*sizeof(double));
-		lists[i].maxItemNum = lists[i].itemNum;
-		lists[i].itemNum = 0;
-	}
-	
-  fh.open(fileName);
-  if(!fh.is_open()){
-    cerr<<"Error opening "<<fileName<<endl;
-  }
-	
-	//Read the header row to get the sample number
-  getline(fh,oneline);
-	//fgets(tmpS, MAX_WORD_NUM*(MAX_NAME_LEN+1)*sizeof(char), fh);
-	
-	//read records of items
-	
-  getline(fh,oneline);
-  
-  wordNum=stringSplit(oneline," \t\r\n\v",vwords);
-  // fields saved to vwords: sgRNA name, gene name, list name, value
-	
-	while ((wordNum>=4)&&(!fh.eof()))
-	{
-		//strcpy(tmpItemName, words[0]);
-		//strcpy(tmpGroupName, words[1]);
-		//strcpy(tmpListName, words[2]);
-		tmpValue = atof(vwords[3].c_str());
-		//WL
-		//parsing prob column, if available
-		if (wordNum > 4)
-		{
-			sgrnaProbValue=atof(vwords[4].c_str());
-    }
-		else
-		{
-			sgrnaProbValue=1.0;
-		}
 
 
-		
-    //WL: now, search for corresponding list index
-  		for (j=0;j<tmpListNum;j++)
-  		{
-  			if (!strcmp(vwords[2].c_str(), lists[j].name))
-  			{
-  				break;
-  			}
-  		}
-    	assert(j<tmpListNum);
-    // save to list
-		lists[j].values[lists[j].itemNum] = tmpValue;
- 		lists[j].itemNum ++;
-    assert(lists[j].itemNum <=lists[j].maxItemNum);
-    
-    //WL: search for gene name (group name)
-		// WL: separate the group name by ","
-    subWordNum=stringSplit(vwords[1],",",vsubwords);
-		assert(subWordNum>0);
-		//for(k=0;k<subWordNum;k++)
-	 for(k=0;k<subWordNum;k++)
-   {
-      	//printf("gene: %s, word: %s\n",tmpItemName,subwords[k]);
-  			for (i=0;i<tmpGroupNum;i++)
-  			{
-  				if (!strcmp(vsubwords[k].c_str(), groups[i].name))
-  				{
-  					break;
-  				} 
-  			}
-  		
-  		
-  			assert(i<tmpGroupNum);
-  		
-        //save group name(gene name)
-  			//strcpy(groups[i].items[groups[i].itemNum].name,tmpItemName);
-  			strcpy(groups[i].items[groups[i].itemNum].name,vwords[0].c_str());
-  			groups[i].items[groups[i].itemNum].value = tmpValue;
-  			groups[i].items[groups[i].itemNum].prob= sgrnaProbValue;
-  			groups[i].items[groups[i].itemNum].listIndex = j;
-  			groups[i].itemNum ++;
-      	assert(groups[i].itemNum <=groups[i].maxItemNum);
-  		
-      	//printf("round %d, group %d itemnum: %d (max %d), list %d itemnum: %d (max %d)\n",k,i,groups[i].itemNum,groups[i].maxItemNum,j,lists[j].itemNum,lists[j].maxItemNum);
-      
-    }//end subwordnum 
-		
-		//wordNum = StringToWords(words, tmpS, MAX_NAME_LEN+1, MAX_WORD_NUM, " \t\r\n\v\f");
-    getline(fh,oneline);
-    wordNum=stringSplit(oneline," \t\r\f\v",vwords);
-   	//printf("wordnum:%d,read one line length:%d\n",wordNum,strlen(tmpS));
-	}//end loop for fh reading
-	
-	fh.close();
-	//fclose(fh);
-	
-	printf("%d items\n%d groups\n%d lists\n", totalItemNum, tmpGroupNum, tmpListNum);
-	
-	*groupNum = tmpGroupNum;
-	*listNum = tmpListNum;
-	
-	//FreeWords(words, MAX_WORD_NUM);
-	//free(tmpS);
-	//free(tmpS2);
-	//FreeWords(subwords, MAX_WORD_NUM);
-	
-	return totalItemNum;
-	
-}
-
-//Save group information to output file. Format <group id> <number of items in the group> <lo-value> <false discovery rate>
-int SaveGroupInfo(char *fileName, GROUP_STRUCT *groups, int groupNum)
-{
-	FILE *fh;
-	int i;
-	
-	fh = (FILE *)fopen(fileName, "w");
-	
-	if (!fh){
-		printf("Cannot open %s.\n", fileName);
-		return -1;
-	}
-	
-	fprintf(fh, "group_id\titems_in_group\tlo_value\tp\tFDR\tgoodsgrna\n");
-	
-	for (i=0;i<groupNum;i++){
-		fprintf(fh, "%s\t%d\t%10.4e\t%10.4e\t%f\t%d\n", groups[i].name, groups[i].itemNum, groups[i].loValue, groups[i].pvalue,groups[i].fdr,groups[i].goodsgrnas);
-	}
-	
-	fclose(fh);
-	
-	return 1;
-}
 
 //Process groups by computing percentiles for each item and lo-values for each group
 //groups: genes
@@ -622,8 +242,8 @@ int ProcessGroups(GROUP_STRUCT *groups, int groupNum, LIST_STRUCT *lists, int li
 	
 	assert(maxItemPerGroup>0);
 	
-	tmpF = (double *)malloc(maxItemPerGroup*sizeof(double));
-	tmpProb = (double *)malloc(maxItemPerGroup*sizeof(double));
+	tmpF = new double[maxItemPerGroup];
+	tmpProb = new double [maxItemPerGroup];
 	
 	for (i=0;i<listNum;i++){
 		QuicksortF(lists[i].values, 0, lists[i].itemNum-1);
@@ -633,18 +253,18 @@ int ProcessGroups(GROUP_STRUCT *groups, int groupNum, LIST_STRUCT *lists, int li
 		//Compute percentile for each item
 		
 		isallone=true;
-		for (j=0;j<groups[i].itemNum;j++)
-		{
+    int validsgs=0;
+		for (j=0;j<groups[i].itemNum;j++){
+      if(groups[i].items[j].isChosen==0) continue;
 			listIndex = groups[i].items[j].listIndex;
 			
 			index1 = bTreeSearchingF(groups[i].items[j].value-0.000000001, lists[listIndex].values, 0, lists[listIndex].itemNum-1);
 			index2 = bTreeSearchingF(groups[i].items[j].value+0.000000001, lists[listIndex].values, 0, lists[listIndex].itemNum-1);
 			
 			groups[i].items[j].percentile = ((double)index1+index2+1)/(lists[listIndex].itemNum*2);
-			tmpF[j] = groups[i].items[j].percentile;
-			tmpProb[j]=groups[i].items[j].prob;
-			if(tmpProb[j]!=1.0)
-			{
+			tmpF[validsgs] = groups[i].items[j].percentile;
+			tmpProb[validsgs]=groups[i].items[j].prob;
+			if(tmpProb[validsgs]!=1.0){
 				isallone=false;
 			}
       // save for control sequences
@@ -652,25 +272,26 @@ int ProcessGroups(GROUP_STRUCT *groups, int groupNum, LIST_STRUCT *lists, int li
         string sgname(groups[i].items[j].name);
         if(ControlSeqMap.count(sgname)>0){
           int sgindex=ControlSeqMap[sgname];
-          ControlSeqPercentile[sgindex]=tmpF[j];
+          ControlSeqPercentile[sgindex]=tmpF[validsgs];
         }
-      }
-		}
-    if(groups[i].itemNum<=1){
+      }//end if
+      validsgs++;
+		}// end j
+    if(validsgs<=1){
       isallone=true;
     }
     //printf("Gene: %s\n",groups[i].name);
 		if(isallone){
-			ComputeLoValue(tmpF, groups[i].itemNum, groups[i].loValue, maxPercentile, groups[i].goodsgrnas);
+			ComputeLoValue(tmpF, validsgs, groups[i].loValue, maxPercentile, groups[i].goodsgrnas);
 		}
 		else{
-			ComputeLoValue_Prob(tmpF, groups[i].itemNum, groups[i].loValue, maxPercentile, tmpProb,groups[i].goodsgrnas);
+			ComputeLoValue_Prob(tmpF, validsgs, groups[i].loValue, maxPercentile, tmpProb,groups[i].goodsgrnas);
 		}
     groups[i].isbad=0;
-	}
+	}//end i loop
 
-	free(tmpF);
-	free(tmpProb);
+	delete[] tmpF;
+	delete[] tmpProb;
   //check if all control sequences are properly assigned a value
   if(UseControlSeq){
     for(map<string,int>::iterator mit = ControlSeqMap.begin(); mit != ControlSeqMap.end(); mit++){
@@ -694,8 +315,11 @@ int ComputeLoValue(double *percentiles,     //array of percentiles
 	double *tmpArray;
 	double tmpLoValue, tmpF;
 	
-	assert(num>0);
-	
+	if(num==0){
+    loValue=1.00;
+    goodsgrna=0;
+    return 0;
+  }
   if(num>nLovarray){
     delete[] tmpLovarray;
     tmpLovarray=new double[num];
@@ -715,8 +339,7 @@ int ComputeLoValue(double *percentiles,     //array of percentiles
 	tmpLoValue = 1.0;
   goodsgrna=0;
 	
-	for (i=0;i<num;i++)
-	{
+	for (i=0;i<num;i++){
 		// if ((tmpArray[i]>maxPercentile)&&(i>0)) //only calculate the value if at least 1 percentile is smaller than the cutoff
 		if ((tmpArray[i]>maxPercentile)){
       if(i==0){}
@@ -760,7 +383,11 @@ int ComputeLoValue_Prob(double *percentiles,     //array of percentiles
 	double c_prob;
 	double accuLoValue;
 
-	assert(num>0);
+	if(num==0){
+    loValue=1.00;
+    goodsgrna=0;
+    return 0;
+  }
 		
   if(num>nLovarray){
     delete[] tmpLovarray;
@@ -915,38 +542,39 @@ int ComputeFDR(GROUP_STRUCT *groups, int groupNum, double maxPercentile, int num
 	for (i=0;i<scanPass;i++){
     for (j=0;j<groupNum;j++){
 			isallone=true;
+      int validsgs=0;
 			for (k=0;k<groups[j].itemNum;k++)
 			{
+        if(groups[j].items[k].isChosen==0) continue;
         ufvalue=Uniform(0.0, 1.0);
         if(UseControlSeq){
           rand_ctl_index=(int)(n_control*ufvalue);
           if(rand_ctl_index>=n_control) rand_ctl_index=n_control-1;
-          tmpPercentile[k]=control_prob_array[rand_ctl_index];
+          tmpPercentile[validsgs]=control_prob_array[rand_ctl_index];
         }else{
-				  tmpPercentile[k] = ufvalue;
+				  tmpPercentile[validsgs] = ufvalue;
         }
-				tmpProb[k]=groups[j].items[k].prob;
-				if(tmpProb[k]!=1.0)
+				tmpProb[validsgs]=groups[j].items[k].prob;
+				if(tmpProb[validsgs]!=1.0)
 				{
 					isallone=false;
 				}
-			}
-      if(groups[j].itemNum<=1)
-      {
+        validsgs++;
+			} //end for k
+      if(validsgs<=1)
         isallone=true;
-      }
 			
 			if(isallone){
-				ComputeLoValue(tmpPercentile, groups[j].itemNum,randLoValue[randLoValueNum], maxPercentile, tmp_int);
+				ComputeLoValue(tmpPercentile, validsgs,randLoValue[randLoValueNum], maxPercentile, tmp_int);
 			}
 			else
 			{
-				ComputeLoValue_Prob(tmpPercentile, groups[j].itemNum,randLoValue[randLoValueNum], maxPercentile,tmpProb,tmp_int);
+				ComputeLoValue_Prob(tmpPercentile, validsgs,randLoValue[randLoValueNum], maxPercentile,tmpProb,tmp_int);
 			}
 			
 			randLoValueNum++;
-		}
-	}
+		}// end for j
+	}//end for i
 	
 	QuicksortF(randLoValue, 0, randLoValueNum-1);
 						  

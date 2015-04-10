@@ -168,7 +168,8 @@ def getNBPValue(mean0,var0,mean1, lower=False,log=False):
   from scipy.stats import nbinom
   n=len(mean0);
   nb_p=[mean0[i]/var0[i] for i in range(n)]; # consisitent with R
-  nb_n=[mean0[i]*mean0[i]/(var0[i]-mean0[i]) for i in range(n)];
+  nb_n0=[mean0[i]*mean0[i]/(var0[i]-mean0[i]) for i in range(n)];
+  nb_n=[ (lambda t: t if t>=1 else 1)(x) for x in nb_n0];
   #
   if lower==True:
     if log==False:
@@ -257,6 +258,11 @@ def crispr_test(tab,ctrlg,testg, destfile,sgrna2genelist,args):
   tabctrlmodel_mat=tabctrlmod.values();
   tabc_mean=getMeans(tabctrl_mat);
   tabcmodel_mean=getMeans(tabctrlmodel_mat);
+  #
+  # setup the valid sgRNA flag
+  validsgrna=[1]*n;
+  if hasattr(args,"remove_zero") and ( args.remove_zero=="control" or args.remove_zero=="both"):
+    validsgrna=[ (lambda x: 1 if x>0 else 0)(t) for t in tabc_mean]; 
   # if mean of the control samples is 0: set it to greater than 0
   tabc_min=min([x for x in tabc_mean if x>0]);
   tabc_mean=[ (lambda x: x if x>tabc_min else tabc_min)(t) for t in tabc_mean];
@@ -267,6 +273,10 @@ def crispr_test(tab,ctrlg,testg, destfile,sgrna2genelist,args):
   nt=tabtest[tabtest.keys()[0]];
   ttmat=tabtest.values();
   ttmean=getMeans(ttmat);
+  # set up the valid sgRNA flag
+  if hasattr(args,"remove_zero") and ( args.remove_zero=="treatment" or args.remove_zero=="both"):
+    validsgrna2=[ (lambda x: 1 if x>0 else 0)(t) for t in ttmean]; 
+    validsgrna=[validsgrna[t]*validsgrna2[t] for t in range(n)];
   # use ttmean to calculate the pvalue
   # first, convert to standard normal distribution values
   tt_theta=[(ttmean[i]-tabc_mean[i])/math.sqrt(tabc_adjvar[i]) for i in range(n)];
@@ -325,9 +335,9 @@ def crispr_test(tab,ctrlg,testg, destfile,sgrna2genelist,args):
     destkeys=tabctrl.keys();
     sort_id=[i[0] for i in sorted(enumerate(tt_p_lower_score), key=lambda x:x[1],reverse=False)];
     # output to file
-    print('\t'.join(['sgrna','symbol','pool','p.low']),file=destf);
+    print('\t'.join(['sgrna','symbol','pool','p.low','prob','chosen']),file=destf);
     for i in sort_id:
-      report=[destkeys[i], sgrna2genelist[destkeys[i]],'list', tt_p_lower_score[i]];
+      report=[destkeys[i], sgrna2genelist[destkeys[i]],'list', tt_p_lower_score[i], '1', validsgrna[i]];
       print('\t'.join([str(x) for x in report]),file=destf);
     destf.close();
     tt_p_lower_fdr=pFDR(tt_p_lower,method=args.adjust_method);
@@ -340,9 +350,9 @@ def crispr_test(tab,ctrlg,testg, destfile,sgrna2genelist,args):
     destkeys=tabctrl.keys();
     sort_id=[i[0] for i in sorted(enumerate(tt_p_higher_score), key=lambda x:x[1],reverse=False)];
     # output to file
-    print('\t'.join(['sgrna','symbol','pool','p.high']),file=destf);
+    print('\t'.join(['sgrna','symbol','pool','p.high','prob','chosen']),file=destf);
     for i in sort_id:
-      report=[destkeys[i], sgrna2genelist[destkeys[i]],'list', tt_p_higher_score[i]];
+      report=[destkeys[i], sgrna2genelist[destkeys[i]],'list', tt_p_higher_score[i], '1', validsgrna[i]];
       print('\t'.join([str(x) for x in report]),file=destf);
     destf.close();
     tt_p_higher_fdr=pFDR(tt_p_higher,method=args.adjust_method);
@@ -424,8 +434,10 @@ def magecktest_main(args):
         controlgroup_label=str(supergroup_control[cpindex]); # only for display
         logging.info('Control samples:'+controlgroup_label);
       else:
-        controlgroup=[x for x in range(nsample) if x not in treatgroup];
-        controlgrouplabellist=[samplelabelindex[x] for x in range(nsample) if x not in treatgroup];
+        #controlgroup=[x for x in range(nsample) if x not in treatgroup];
+        #controlgrouplabellist=[samplelabelindex[x] for x in range(nsample) if x not in treatgroup];
+        xls=[x for x in range(nsample) if x not in treatgroup];
+        (controlgroup,controlgrouplabellist)=parse_sampleids(','.join([str(t) for t in xls]),samplelabelindex); 
         controlgroup_label='rest';
         logging.info('Control samples: the rest of the samples');
       labellist_control+=[controlgroup_label];
@@ -491,7 +503,8 @@ def magecktest_main(args):
     vrv.writeGeneSummaryStatToBuffer();
     # write to rnw and R file
     vrv.closeRTemplate();
-    vrv.generatePDF(args.keep_tmp);
+    if hasattr(args, "pdf_report") and args.pdf_report:
+      vrv.generatePDF(args.keep_tmp);
   # end if        
  
 

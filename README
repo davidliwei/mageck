@@ -11,6 +11,7 @@ Version history
 
 Version 0.5
 *Add multiple visualization functions
+*Fix a bug in negative binomial calculation (thanks to Ido Tamir)
 
 Version 0.4.4
 *Improve the running speed of the RRA program.
