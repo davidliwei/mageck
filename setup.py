@@ -38,7 +38,7 @@ def main():
     sys.exit(1);
   
   setup(name='mageck',
-    version='0.4.4',
+    version='0.5.0',
     description='Model-based Analysis of Genome-wide CRISPR-Cas9 Knockout',
     author='Wei Li, Han Xu',
     author_email='li.david.wei@gmail.com',
@@ -46,7 +46,8 @@ def main():
     packages=['mageck'],
     scripts=['bin/RRA','bin/mageck'],
     package_dir={'mageck':'mageck'},
-    cmdclass={'install':RRAInstall}
+    cmdclass={'install':RRAInstall},
+    package_data={'mageck':['*.Rnw','*.RTemplate']}
     #package_data={'mageck':['mageck/Makefile','mageck/src/*.c','include/*','utils/*']}
     #data_files=[('',['Makefile','src/*.c','include/*','utils/*'])]
   );

@@ -283,14 +283,18 @@ def crispr_test(tab,ctrlg,testg, destfile,sgrna2genelist,args):
   tt_abstheta=[math.fabs(tt_theta[i]) for i in range(n)];
   #
   try:
-    tt_p_lower=getNBPValue(tabc_mean,tabc_adjvar,ttmean,lower=True);
-    tt_p_higher=getNBPValue(tabc_mean,tabc_adjvar,ttmean,lower=False);
-    # tt_p_lower_score=getNBPValue(tabc_mean,tabc_adjvar,ttmean,lower=True,log=True);
-    # tt_p_higher_score=getNBPValue(tabc_mean,tabc_adjvar,ttmean,lower=False,log=True);
-  except ImportError:
-    logging.warning('An error occurs while trying to compute p values using scipy. Will use normal model instead of Negative Binomial model, but please check with your scipy installation.');
+    # for consistency, use normal p values
     tt_p_lower=getNormalPValue(tabc_mean,tabc_adjvar,ttmean,lower=True);
     tt_p_higher=getNormalPValue(tabc_mean,tabc_adjvar,ttmean,lower=False);
+    #tt_p_lower=getNBPValue(tabc_mean,tabc_adjvar,ttmean,lower=True);
+    #tt_p_higher=getNBPValue(tabc_mean,tabc_adjvar,ttmean,lower=False);
+    
+    # tt_p_lower_score=getNBPValue(tabc_mean,tabc_adjvar,ttmean,lower=True,log=True);
+    # tt_p_higher_score=getNBPValue(tabc_mean,tabc_adjvar,ttmean,lower=False,log=True);
+  #except ImportError:
+  #  #logging.warning('An error occurs while trying to compute p values using scipy. Will use normal model instead of Negative Binomial model, but please check with your scipy installation.');
+  #  #tt_p_lower=getNormalPValue(tabc_mean,tabc_adjvar,ttmean,lower=True);
+  #  #tt_p_higher=getNormalPValue(tabc_mean,tabc_adjvar,ttmean,lower=False);
   except:
     logging.error('An error occurs while trying to compute p values. Quit..');
     sys.exit(-1);

@@ -2,3 +2,4 @@ recursive-include rra *
 recursive-include demo *
 recursive-include doc *
 include mageck/*.RTemplate
+include mageck/*.Rnw

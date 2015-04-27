@@ -1,0 +1,103 @@
+% This is a template file for Sweave used in MAGeCK
+% Author: Wei Li, Shirley Liu lab
+% Do not modify lines beginning with "#__".
+\documentclass{article}
+
+\usepackage{amsmath}
+\usepackage{amscd}
+\usepackage[tableposition=top]{caption}
+\usepackage{ifthen}
+\usepackage{fullpage}
+\usepackage[utf8]{inputenc}
+
+\begin{document}
+\setkeys{Gin}{width=0.9\textwidth}
+
+\title{MAGeCK Count Report}
+\author{Wei Li}
+
+\maketitle
+
+
+\tableofcontents
+
+\section{Summary}
+
+%Function definition
+<<label=funcdef,include=FALSE,echo=FALSE>>=
+genreporttable<-function(filelist,labellist,reads,mappedreads,zerocounts){
+  xtb=data.frame(File=filelist,Label=labellist,Reads=reads,MappedReads=mappedreads,MappedPercentage=mappedreads/reads,ZeroCounts=zerocounts);
+  colnames(xtb)=c("File","Label","Reads","Mapped","Percentage","ZeroCounts");
+  return (xtb);
+}
+
+genboxplot<-function(filename,...){
+  #slmed=read.table(filename,header=T)
+  slmed=read.csv(filename)
+  slmat=as.matrix(slmed[,c(-1,-2)])
+  slmat_log=log2(slmat+1)
+
+  boxplot(slmat_log,pch='.',las=2,ylab='log2(read counts)',cex.axis=0.8,...)
+}
+
+colors=c( "#E41A1C", "#377EB8", "#4DAF4A", "#984EA3", "#FF7F00",  "#A65628", "#F781BF",
+          "#999999", "#66C2A5", "#FC8D62", "#8DA0CB", "#E78AC3", "#A6D854", "#FFD92F", "#E5C494", "#B3B3B3", 
+          "#8DD3C7", "#FFFFB3", "#BEBADA", "#FB8072", "#80B1D3", "#FDB462", "#B3DE69", "#FCCDE5",
+          "#D9D9D9", "#BC80BD", "#CCEBC5", "#FFED6F");
+
+ctfit_tx=0;
+genpcaplot<-function(filename,...){
+  #slmed=read.table(filename,header=T)
+  slmed=read.csv(filename)
+  slmat=as.matrix(slmed[,c(-1,-2)])
+  slmat_log=log2(slmat+1)
+  ctfit_tx<<-prcomp(t(slmat_log),center=TRUE)
+  
+  # par(mfrow=c(2,1));
+  # first 2 PCA
+  samplecol=colors[((1:ncol(slmat)) %% length(colors)) ]
+  plot(ctfit_tx$x[,1],ctfit_tx$x[,2],xlab='PC1',ylab='PC2',main='First 2 PCs',col=samplecol,xlim=1.1*range(ctfit_tx$x[,1]),ylim=1.1*range(ctfit_tx$x[,2]));
+  text(ctfit_tx$x[,1],ctfit_tx$x[,2],rownames(ctfit_tx$x),col=samplecol);
+  # par(mfrow=c(1,1));
+}
+
+genpcavar<-function(){
+  # % variance 
+  varpca=ctfit_tx$sdev^2
+  varpca=varpca/sum(varpca)*100;
+  if(length(varpca)>10){
+    varpca=varpca[1:10];
+  }
+  plot(varpca,type='b',lwd=2,pch=20,xlab='PCs',ylab='% Variance explained');
+}
+
+@
+
+The statistics of comparisons is as indicated in the following table. 
+
+<<label=tab1,echo=FALSE,results=tex>>=
+library(xtable)
+#__COUNT_SUMMARY_STAT__
+cptable=genreporttable(filelist,labellist,reads,mappedreads,zerocounts);
+print(xtable(cptable, caption = "Summary of comparisons", label = "tab:one",
+    digits = c(0,0, 0, 0, 0, 2,0),
+    align=c('c', 'p{3cm}', 'c', 'c', 'c', 'c', 'c'),
+    table.placement = "tbp",
+    caption.placement = "top"))
+@
+
+The meanings of the columns are as follows.
+
+\begin{itemize}
+\item \textbf{File}: The filename of fastq file;
+\item \textbf{Label}: Assigned label;
+\item \textbf{Reads}: The total read count in the fastq file;
+\item \textbf{Mapped}: Reads that can be mapped to gRNA library;
+\item \textbf{Percentage}: The percentage of mapped reads;
+\item \textbf{ZeroCounts}: The number of sgRNA with 0 read counts.
+\end{itemize}
+
+
+%__INDIVIDUAL_PAGE__
+
+\end{document}

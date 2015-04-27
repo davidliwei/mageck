@@ -15,6 +15,7 @@ import sys;
 import argparse;
 import math;
 import logging;
+from testVisualCount import *;
 
 def mageckcount_parseargs():
   """
@@ -293,6 +294,39 @@ def mageckcount_printstat(args,datastat):
     logging.info('Summary of file '+k+':');
     for (v1,v2) in v.iteritems():
       logging.info(str(v1)+'\t'+str(v2));
+  # write to table
+  crv=VisualRCount();
+  crv.outprefix=args.output_prefix;
+  for (fq, fqstat) in datastat.iteritems():
+    crv.fastqfile+=[fq];
+    if 'label' in fqstat:
+      crv.fastqlabels+=[fqstat['label']];
+    else:
+      crv.fastqlabels+=['NA'];
+    if 'reads' in fqstat:
+      crv.reads+=[fqstat['reads']];
+    else:
+      crv.reads+=[0];
+    if 'mappedreads' in fqstat:
+      crv.mappedreads+=[fqstat['mappedreads']];
+    else:
+      crv.mappedreads+=[0];
+    if 'zerosgrnas' in fqstat:
+      crv.zerocounts+=[fqstat['zerosgrnas']];
+    else:
+      crv.zerocounts+=[0];
+  #
+  crv.startRTemplate();
+  crv.writeCountSummary();
+  outcsvfile=args.output_prefix+'.count.median_normalized.csv';
+  crv.insertReadCountBoxPlot(os.path.basename(outcsvfile));
+  crv.insertPCAPlot(os.path.basename(outcsvfile));
+  crv.closeRTemplate();
+  if hasattr(args,"pdf_report") and args.pdf_report:
+    if hasattr(args,"keep_tmp") :
+      crv.generatePDF(keeptmp=args.keep_tmp);
+    else:
+      crv.generatePDF();
 
 def mageckcount_main(args):
   """
@@ -416,80 +450,4 @@ if __name__ == '__main__':
     sys.exit(0)
 
 
-
-#### These are old functions
-# def getsgrnalist(filename):
-#   sgrnalist=[];
-#   if filename.upper().endswith('.FA') or filename.upper().endswith('.FASTA'):
-#     for line in open(filename):
-#       if line[0]=='>':
-#         tf=line.strip();
-#         tf=tf[1:];
-#         sgrnalist+=[tf];
-#   else:
-#     for line in open(filename):
-#       if line[0]=='#':
-#         continue;
-#       field=line.strip().split();
-#       sgrnalist+=[field[0]];
-#   logging.info('Loading '+str(len(sgrnalist))+' sgRNAs');
-#   return sgrnalist;
-# 
-# def getsgrna2genelist(filename):
-#   sgrna2gene={};
-#   n=0;
-#   for line in open(filename):
-#     n=n+1;
-#     if line[0]=='#':
-#       continue;
-#     field=line.strip().split();
-#     if len(field)<2:
-#       logging.warning('There are less than 2 fields in the sgRNA to gene mapping file (line '+str(n)+'). Skip the rank association test ...');
-#       return None;
-#     if field[0] in sgrna2gene:
-#       logging.warning('Duplicated sgRNA name of '+field[0]+' in line '+str(n)+', skip this record..');
-#       continue;
-#     sgrna2gene[field[0]]=field[1];
-#   return sgrna2gene;
-# 
-# 
-# # retrive count tables
-# def getcounttable(sgrnalist,samfiles,denovo=False):
-#   sgrnatab={};
-#   ns=len(samfiles);
-#   for s in sgrnalist:
-#     sgrnatab[s]=[0]*len(samfiles);
-#   for si in range(ns):
-#     samfilename=samfiles[si];
-#     logging.info('Processing '+samfilename+' ... ');
-#     nline=0;
-#     for line in open(samfilename):
-#       if line[0]=='@':
-#         continue;
-#       nline+=1;
-#       if nline % 100000 ==1:
-#         logging.info('Processing '+str(nline)+' lines..');
-#       field=line.strip().split();
-#       sid=field[2];
-#       if denovo:
-#         if sid not in sgrnatab:
-#           sgrnatab[sid]=[0]*ns;
-#         sgrnatab[sid][si]+=1;
-#       else:
-#         # pass;
-#         if sid in sgrnatab:
-#           sgrnatab[sid][si]+=1;
-#   return sgrnatab;
-# 
- 
-# # write count table
-# def writecounttable(table,filename):
-#   logging.info('writing to '+filename+' ...');
-#   ofile=open(filename,'w');
-#   for (ck, cv) in table.iteritems():
-#     print(ck+'\t'+'\t'.join([str(x) for x in cv]),file=ofile);
-#   ofile.close();
-# 
-# 
-#### END of old functions
 

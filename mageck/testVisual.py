@@ -80,7 +80,7 @@ class VisualRValue:
       self.rtemplatestr=rtp;
       
       # write pdf loading
-      pdfloadstr="pdf(file='"+os.path.basename(outpdffile)+"',width=6,height=6);";
+      pdfloadstr="pdf(file='"+os.path.basename(outpdffile)+"',width=4.5,height=4.5);";
       # write file reading
       # rtp=re.sub('__GENE_SUMMARY_FILE__',self.genesummaryfile,rtp); # gene_summary
       tableadstr="gstable=read.table('"+os.path.basename(self.genesummaryfile)+"',header=T)";
@@ -124,7 +124,8 @@ class VisualRValue:
     
   def WriteRTemplate(self):
     '''
-    Given a VisualRValue object, write an R file
+    Given a VisualRValue object, write to an R file.
+    The following variables need to be set up: self.cpindex, self.targetgene, self.cplabel
     '''
     
     # load file
@@ -145,12 +146,16 @@ class VisualRValue:
     print(rtp,file=self.outrfh);
     # save to Rnw file
     rtprnw="";
+    rtprnw+=r"\n\\newpage\\section{Comparison results of "+re.sub('_',' ',self.cplabel)+"}\n";
+    rtprnw+=r"\n"+"The following figure shows the distribution of RRA score in the comparison "+re.sub('_',' ',self.cplabel)+", and the RRA scores of "+str(len(self.targetgene))+" genes.\n"; 
     rtprnw+="\n<<echo=FALSE>>=\n";
     tableadstr="gstable=read.table('"+os.path.basename(self.genesummaryfile)+"',header=T)";
     rtprnw+=tableadstr+"\n@"+"\n";
-    rtprnw+=r"%\n\\"+"begin{figure}\n"+r"\\"+"begin{center}\n"
-    rtprnw+="<<fig=TRUE,echo=FALSE,width=6,height=6>>="+rtp+"@"+"\n";
-    rtprnw+="\\end{center}\n\\end{figure}\n%%\n\\clearpage\n";
+    rtprnw+=r"%\n\n\n";
+    # rtprnw+=r"\\"+"begin{figure}[!h]\n"+r"\\"+"begin{center}\n"
+    rtprnw+="<<fig=TRUE,echo=FALSE,width=4.5,height=4.5>>="+rtp+"@"+"\n";
+    # rtprnw+="\\end{center}\n\\end{figure}\n";
+    rtprnw+=r"%%\n"+"\\clearpage\n";
     rtprnw+="%__INDIVIDUAL_PAGE__\n\n"
     updatestr=re.sub('%__INDIVIDUAL_PAGE__',rtprnw,self.outrnwstring);
     self.outrnwstring=updatestr;
@@ -207,6 +212,8 @@ class VisualRValue:
     #insertstr+=parstr;
     nsubfigs=4;
     npl=0;
+    # explanation
+    insertstr+=r"\\newpage\n"+"The following figures show the distribution of sgRNA read counts (normalized) of selected genes in selected samples.\n";
     # plot individual genes
     for gene in genelist:
       sglist=[ k for (k,v) in sgrna2genelist.iteritems() if v==gene];
@@ -233,14 +240,15 @@ class VisualRValue:
       # save to Rnw file
       rtprnw='';
       if npl %4 ==1:
-        rtprnw=r"%\n\\"+"begin{figure}\n"+r"\\"+"begin{center}\n"
-        rtprnw+="<<fig=TRUE,echo=FALSE,width=6,height=6>>=\n";
+        rtprnw=r"%\n\n\n";
+        # rtprnw+=r"\\"+"begin{figure}[!h]\n"+r"\\"+"begin{center}\n"
+        rtprnw+="<<fig=TRUE,echo=FALSE,width=4.5,height=4.5>>=\n";
         rtprnw+="par(mfrow=c(2,2));\n"
       rtprnw+=rtp;
       if npl%4==0 or npl == len(genelist):
         rtprnw+="\npar(mfrow=c(1,1));\n"
         rtprnw+="@"+"\n";
-        rtprnw+="\\end{center}\n\\end{figure}\n%%\n";
+        # rtprnw+="\\end{center}\n\\end{figure}\n%%\n";
       insertstr+=rtprnw;
       # rtprnw+="%__INDIVIDUAL_PAGE__\n\n"
       # updatestr=re.sub('%__INDIVIDUAL_PAGE__',rtprnw,self.outrnwstring);
@@ -325,7 +333,8 @@ class VisualRValue:
     rfile=self.outprefix+'.R';
     summaryfile=self.outprefix+'_summary';
     (rnwfile_dir,rnwfile_base)=os.path.split(rnwfile);
-    
+    if rnwfile_dir=='':
+      rnwfile_dir='./';
     systemcall('cd '+rnwfile_dir+'; '+'Rscript '+os.path.basename(rfile));
     #systemcall('cd '+rnwfile_dir+'; '+ 'R CMD Sweave '+rnwfile_base);
     #systemcall('export SWEAVE_STYLEPATH_DEFAULT="TRUE";'+ 'cd '+rnwfile_dir+'; '+'pdflatex '+os.path.basename(summaryfile));

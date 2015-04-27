@@ -26,7 +26,7 @@ Version 0.4.3
 *Fix a bug of pathway analysis where the RRA program stops early for certain gene belonging to too many pathways.
 
 Version 0.4.2
-*Create youtube tutorial videos for installation and sample comparisons.
+*Create Youtube tutorial videos for installation and sample comparisons.
 *Improve the median normalization method to handle cases with many zero-count sgRNAs.
 *The median normalized read count are provided in the count command.
 *Modify the count command line options to accept combining reads from technical replicates.

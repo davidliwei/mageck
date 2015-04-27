@@ -1,0 +1,106 @@
+!_TAG_FILE_FORMAT	2	/extended format; --format=1 will not append ;" to lines/
+!_TAG_FILE_SORTED	1	/0=unsorted, 1=sorted, 2=foldcase/
+!_TAG_PROGRAM_AUTHOR	Darren Hiebert	/dhiebert@users.sourceforge.net/
+!_TAG_PROGRAM_NAME	Exuberant Ctags	//
+!_TAG_PROGRAM_URL	http://ctags.sourceforge.net	/official site/
+!_TAG_PROGRAM_VERSION	5.8	//
+VisualRValue	testVisual.py	/^class VisualRValue:$/;"	c
+WriteRTemplate	testVisual.py	/^  def WriteRTemplate(self):$/;"	m	class:VisualRValue
+argparse	argsParser.py	/^import argparse$/;"	i
+argparse	mageckCount.py	/^import argparse;$/;"	i
+args	mageckCount.py	/^    args=mageckcount_parseargs();$/;"	v
+closeRTemplate	testVisual.py	/^  def closeRTemplate(self):$/;"	m	class:VisualRValue
+comparisonlabel	testVisual.py	/^  comparisonlabel=[]; # label for comparison$/;"	v	class:VisualRValue
+cpindex	testVisual.py	/^  cpindex=[];$/;"	v	class:VisualRValue
+cplabel	testVisual.py	/^  cplabel=''$/;"	v	class:VisualRValue
+crispr_test	crisprFunction.py	/^def crispr_test(tab,ctrlg,testg, destfile,sgrna2genelist,args):$/;"	f
+crisprseq_parseargs	argsParser.py	/^def crisprseq_parseargs():$/;"	f
+generatePDF	testVisual.py	/^  def generatePDF(self,keeptmp=False):$/;"	m	class:VisualRValue
+genesummaryfile	testVisual.py	/^  genesummaryfile='';$/;"	v	class:VisualRValue
+getGeneSummaryStat	testVisual.py	/^  def getGeneSummaryStat(self,isplot=True):$/;"	m	class:VisualRValue
+getMeans	crisprFunction.py	/^def getMeans(matt):$/;"	f
+getNBPValue	crisprFunction.py	/^def getNBPValue(mean0,var0,mean1, lower=False,log=False):$/;"	f
+getNormalPValue	crisprFunction.py	/^def getNormalPValue(mean0,var0,mean1, lower=False):$/;"	f
+getVars	crisprFunction.py	/^def getVars(matt):$/;"	f
+getadjustvar	crisprFunction.py	/^def getadjustvar(coef,meanval,method='mixed'):$/;"	f
+getcounttablefromfile	mageckCount.py	/^def getcounttablefromfile(filename):$/;"	f
+getgeomean	crisprFunction.py	/^def getgeomean(v):$/;"	f
+getnormcdf	crisprFunction.py	/^def getnormcdf(x,lowertail=True):$/;"	f
+leastsquare	crisprFunction.py	/^def leastsquare(x,y,weight=None):$/;"	f
+loadGeneExp	testVisual.py	/^  def loadGeneExp(self,genelist,nttab,sgrna2genelist,collabels):$/;"	m	class:VisualRValue
+loadSelGene	testVisual.py	/^  def loadSelGene(self,targetgene):$/;"	m	class:VisualRValue
+loadSelGeneWithExp	testVisual.py	/^  def loadSelGeneWithExp(self,targetgene,nttab,sgrna2genelist,collabels,k=10):$/;"	m	class:VisualRValue
+loadTopK	testVisual.py	/^  def loadTopK(self, filename, k=10):$/;"	m	class:VisualRValue
+loadTopKWithExp	testVisual.py	/^  def loadTopKWithExp(self,filename,nttab,sgrna2genelist,collabels,k=10):$/;"	m	class:VisualRValue
+logging	argsParser.py	/^import logging$/;"	i
+logging	crisprFunction.py	/^import logging$/;"	i
+logging	fileOps.py	/^import logging$/;"	i
+logging	mageckCount.py	/^import logging;$/;"	i
+logging	pathwayFunc.py	/^import logging;$/;"	i
+logging	testVisual.py	/^import logging;$/;"	i
+mageck_pathway_standardize	pathwayFunc.py	/^def mageck_pathway_standardize(gdict):$/;"	f
+mageck_pathway_ztest	pathwayFunc.py	/^def mageck_pathway_ztest(args,gdict,pdict):$/;"	f
+mageck_pathway_ztest_permutation	pathwayFunc.py	/^def mageck_pathway_ztest_permutation(args,gdict,pdict,pdictpvals):$/;"	f
+mageck_pathwaygsa	pathwayFunc.py	/^def mageck_pathwaygsa(args):$/;"	f
+mageck_pathwayrra	pathwayFunc.py	/^def mageck_pathwayrra(args):$/;"	f
+mageck_pathwayrra_onedir	pathwayFunc.py	/^def mageck_pathwayrra_onedir(args,pdict,cid,sourcefile,rra_path_input_file,rra_path_output_file):$/;"	f
+mageck_pathwaytest	pathwayFunc.py	/^def mageck_pathwaytest(args):$/;"	f
+mageck_printdict	mageckCount.py	/^def mageck_printdict(dict0,args,sgdict,sampledict,sampleids):$/;"	f
+mageck_read_GMT	pathwayFunc.py	/^def mageck_read_GMT(args):$/;"	f
+mageck_readgeneranking	pathwayFunc.py	/^def mageck_readgeneranking(fname,args,log2=False,columnid=2):$/;"	f
+mageck_removetmprra	pathwayFunc.py	/^def mageck_removetmprra(args):$/;"	f
+mageckcount_checkargs	mageckCount.py	/^def mageckcount_checkargs(args):$/;"	f
+mageckcount_checklists	mageckCount.py	/^def mageckcount_checklists(args):$/;"	f
+mageckcount_main	mageckCount.py	/^def mageckcount_main(args):$/;"	f
+mageckcount_mergedict	mageckCount.py	/^def mageckcount_mergedict(dict0,dict1):$/;"	f
+mageckcount_parseargs	mageckCount.py	/^def mageckcount_parseargs():$/;"	f
+mageckcount_printdict	mageckCount.py	/^def mageckcount_printdict(dict0,args,ofile,sgdict,datastat,sep='\\t'):$/;"	f
+mageckcount_printstat	mageckCount.py	/^def mageckcount_printstat(args,datastat):$/;"	f
+mageckcount_processonefile	mageckCount.py	/^def mageckcount_processonefile(filename,args,ctab,genedict,datastat):$/;"	f
+magecktest_main	crisprFunction.py	/^def magecktest_main(args):$/;"	f
+magecktest_removetmp	crisprFunction.py	/^def magecktest_removetmp(prefix):$/;"	f
+math	crisprFunction.py	/^import math$/;"	i
+math	fileOps.py	/^import math$/;"	i
+math	mageckCount.py	/^import math;$/;"	i
+merge_rank_files	fileOps.py	/^def merge_rank_files(lowfile,highfile,outfile,args):$/;"	f
+merge_rank_summary_files	fileOps.py	/^def merge_rank_summary_files(lowfile,highfile,outfile,args,lowfile_prefix='',highfile_prefix=''):$/;"	f
+modelmeanvar	crisprFunction.py	/^def modelmeanvar(ctable,method='edger'):$/;"	f
+nbinom	crisprFunction.py	/^  from scipy.stats import nbinom$/;"	i
+nfdr1	testVisual.py	/^  nfdr1=[]; # genes with FDR < 1, 5, 25%$/;"	v	class:VisualRValue
+nfdr25	testVisual.py	/^  nfdr25=[];$/;"	v	class:VisualRValue
+nfdr5	testVisual.py	/^  nfdr5=[];$/;"	v	class:VisualRValue
+ngenes	testVisual.py	/^  ngenes=[]; # number of genes$/;"	v	class:VisualRValue
+normalizeCounts	mageckCount.py	/^def normalizeCounts(ctable,method='median'):$/;"	f
+os	testVisual.py	/^import os;$/;"	i
+outprefix	testVisual.py	/^  outprefix='sample1';$/;"	v	class:VisualRValue
+outrfh	testVisual.py	/^  outrfh=None;  # file handle for R file$/;"	v	class:VisualRValue
+outrnwfh	testVisual.py	/^  outrnwfh=None;$/;"	v	class:VisualRValue
+outrnwstring	testVisual.py	/^  outrnwstring='';$/;"	v	class:VisualRValue
+pFDR	crisprFunction.py	/^def pFDR(pvalues, method='fdr'):$/;"	f
+parse_sampleids	fileOps.py	/^def parse_sampleids(samplelabel,ids):$/;"	f
+plot_main	testVisual.py	/^def plot_main(args):$/;"	f
+print_function	argsParser.py	/^from __future__ import print_function$/;"	i
+print_function	crisprFunction.py	/^from __future__ import print_function$/;"	i
+print_function	fileOps.py	/^from __future__ import print_function$/;"	i
+print_function	mageckCount.py	/^from __future__ import print_function$/;"	i
+print_function	pathwayFunc.py	/^from __future__ import print_function$/;"	i
+print_function	testVisual.py	/^from __future__ import print_function;$/;"	i
+random	pathwayFunc.py	/^import random;$/;"	i
+rank_association_test	crisprFunction.py	/^def rank_association_test(file,outfile,cutoff,args):$/;"	f
+re	testVisual.py	/^import re;$/;"	i
+rnwtemplatestr	testVisual.py	/^  rnwtemplatestr='';$/;"	v	class:VisualRValue
+rtemplate_gene_str	testVisual.py	/^  rtemplate_gene_str='';  # template string$/;"	v	class:VisualRValue
+rtemplatestr	testVisual.py	/^  rtemplatestr='';  # template string$/;"	v	class:VisualRValue
+selection	testVisual.py	/^  selection=[]; # selections$/;"	v	class:VisualRValue
+startRTemplate	testVisual.py	/^  def startRTemplate(self):$/;"	m	class:VisualRValue
+subprocess	fileOps.py	/^import subprocess$/;"	i
+sys	argsParser.py	/^import sys$/;"	i
+sys	crisprFunction.py	/^import sys$/;"	i
+sys	fileOps.py	/^import sys$/;"	i
+sys	mageckCount.py	/^import sys;$/;"	i
+sys	pathwayFunc.py	/^import sys;$/;"	i
+sys	testVisual.py	/^import sys;$/;"	i
+systemcall	fileOps.py	/^def systemcall(command, cmsg=True):$/;"	f
+targetgene	testVisual.py	/^  targetgene=[];$/;"	v	class:VisualRValue
+types	crisprFunction.py	/^import types$/;"	i
+writeGeneSummaryStatToBuffer	testVisual.py	/^  def writeGeneSummaryStatToBuffer(self):$/;"	m	class:VisualRValue

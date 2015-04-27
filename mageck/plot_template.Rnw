@@ -18,6 +18,11 @@
 
 \maketitle
 
+
+\tableofcontents
+
+\section{Summary}
+
 %Function definition
 <<label=funcdef,include=FALSE,echo=FALSE>>=
 genreporttable<-function(comparisons,ngenes,direction,fdr1,fdr5,fdr25){
