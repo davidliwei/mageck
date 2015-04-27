@@ -1,7 +1,9 @@
 
-# We are moving our site to bitbucket. Please click the following link for the latest MAGeCK experimental code:
+# We are moving our codes to bitbucket. Please click the following link for the latest MAGeCK experimental code:
 
 https://bitbucket.org/davidliwei/mageck/
+
+# Stable MAGeCK version
 
 For a stable version of MAGeCK, please visit:
 
